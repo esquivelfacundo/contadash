@@ -1,0 +1,20 @@
+/* Corrección específica para centrado vertical de textos en inputs */
+.form-input-fix .MuiOutlinedInput-input {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 24px !important;
+}
+
+.form-input-fix .MuiSelect-select {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 24px !important;
+}
+
+.form-input-fix .MuiInputLabel-root {
+  line-height: 1.4375em !important;
+}
+
+.form-input-fix .MuiOutlinedInput-root {
+  align-items: center !important;
+}

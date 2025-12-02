@@ -1,0 +1,309 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
+  IconButton,
+  CircularProgress,
+  Alert,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Divider,
+} from '@mui/material'
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Repeat as RepeatIcon,
+  Add as AddIcon,
+} from '@mui/icons-material'
+import { recurringTransactionsApi } from '@/lib/api/recurring-transactions'
+import RecurringTransactionFormDialog from '@/components/RecurringTransactionFormDialog'
+
+interface RecurringTransactionsModalProps {
+  open: boolean
+  onClose: () => void
+}
+
+export default function RecurringTransactionsModal({ open, onClose }: RecurringTransactionsModalProps) {
+  const [recurringTransactions, setRecurringTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [formDialogOpen, setFormDialogOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<any>(null)
+  const [tabValue, setTabValue] = useState(0)
+
+  useEffect(() => {
+    if (open) {
+      loadRecurringTransactions()
+    }
+  }, [open])
+
+  const loadRecurringTransactions = async () => {
+    try {
+      setLoading(true)
+      const data = await recurringTransactionsApi.getAll()
+      setRecurringTransactions(data)
+    } catch (err: any) {
+      setError('Error al cargar transacciones recurrentes')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreate = () => {
+    setEditingTransaction(null)
+    setFormDialogOpen(true)
+  }
+
+  const handleEdit = (transaction: any) => {
+    setEditingTransaction(transaction)
+    setFormDialogOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta transacción recurrente?')) return
+
+    try {
+      await recurringTransactionsApi.delete(id)
+      loadRecurringTransactions()
+    } catch (err: any) {
+      setError('Error al eliminar transacción recurrente')
+    }
+  }
+
+  const handleFormClose = () => {
+    setFormDialogOpen(false)
+    setEditingTransaction(null)
+    loadRecurringTransactions()
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const getFrequencyLabel = (frequency: string) => {
+    switch (frequency) {
+      case 'MONTHLY': return 'Mensual'
+      case 'YEARLY': return 'Anual'
+      default: return frequency
+    }
+  }
+
+  const getTypeColor = (type: string) => {
+    return type === 'INCOME' ? 'success' : 'error'
+  }
+
+  const getTypeLabel = (type: string) => {
+    return type === 'INCOME' ? 'Ingreso' : 'Egreso'
+  }
+
+  const incomeTransactions = recurringTransactions.filter(t => t.type === 'INCOME')
+  const expenseTransactions = recurringTransactions.filter(t => t.type === 'EXPENSE')
+  const currentTransactions = tabValue === 0 ? incomeTransactions : expenseTransactions
+
+  return (
+    <>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="lg" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#1E293B',
+            color: 'white',
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: 'white' }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <RepeatIcon sx={{ color: '#10B981' }} />
+            <Typography variant="h6" color="white">Transacciones Recurrentes</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleCreate}
+              sx={{ bgcolor: '#10B981', '&:hover': { bgcolor: '#059669' } }}
+            >
+              Nueva Transacción Recurrente
+            </Button>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Tabs */}
+          <Card sx={{ mb: 3, bgcolor: '#0F172A', border: '1px solid #334155' }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={(_, value) => setTabValue(value)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  color: '#94A3B8',
+                  '&.Mui-selected': {
+                    color: '#10B981',
+                  },
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: '#10B981',
+                },
+              }}
+            >
+              <Tab label={`Ingresos (${incomeTransactions.length})`} />
+              <Tab label={`Egresos (${expenseTransactions.length})`} />
+            </Tabs>
+          </Card>
+
+          {loading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress sx={{ color: '#CD9FCC' }} />
+            </Box>
+          ) : currentTransactions.length === 0 ? (
+            <Box textAlign="center" py={4}>
+              <RepeatIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No hay {tabValue === 0 ? 'ingresos' : 'egresos'} recurrentes
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Crea transacciones que se repitan automáticamente cada mes o año
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Descripción</TableCell>
+                    <TableCell>Categoría</TableCell>
+                    <TableCell>Cliente/Empresa</TableCell>
+                    <TableCell align="right">Monto</TableCell>
+                    <TableCell>Frecuencia</TableCell>
+                    <TableCell>Estado</TableCell>
+                    <TableCell align="center">Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {currentTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>
+                        <Typography variant="subtitle2" fontWeight="bold" color="white">
+                          {transaction.description}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {transaction.category && (
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <span>{transaction.category.icon}</span>
+                            <Typography variant="body2" color="white">
+                              {transaction.category.name}
+                            </Typography>
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {transaction.client ? (
+                          <Typography variant="body2" color="white">
+                            {transaction.client.company}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography 
+                          variant="subtitle2" 
+                          fontWeight="bold" 
+                          color={transaction.type === 'INCOME' ? '#10B981' : '#EF4444'}
+                        >
+                          {formatCurrency(transaction.amountArs)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={getFrequencyLabel(transaction.frequency)}
+                          variant="outlined"
+                          size="small"
+                          sx={{ 
+                            borderColor: '#334155',
+                            color: '#94A3B8',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={transaction.isActive ? 'Activa' : 'Inactiva'}
+                          size="small"
+                          sx={{
+                            bgcolor: transaction.isActive ? '#10B981' : '#6B7280',
+                            color: 'white',
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEdit(transaction)}
+                          sx={{ color: '#94A3B8', '&:hover': { color: '#10B981' } }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(transaction.id)}
+                          sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444' } }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <RecurringTransactionFormDialog
+        open={formDialogOpen}
+        onClose={handleFormClose}
+        onSuccess={handleFormClose}
+        recurring={editingTransaction}
+      />
+    </>
+  )
+}
