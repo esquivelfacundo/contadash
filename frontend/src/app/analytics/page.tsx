@@ -158,7 +158,7 @@ export default function AnalyticsPage() {
       const startDate = new Date()
       startDate.setMonth(startDate.getMonth() - periodMonths)
       
-      const monthsData = []
+      const monthsData: any[] = []
       const currentDate = new Date(startDate)
       
       while (currentDate <= endDate) {
@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
       const startDate = new Date()
       startDate.setMonth(startDate.getMonth() - periodMonths)
       
-      const monthsData = []
+      const monthsData: any[] = []
       const currentDate = new Date(startDate)
       
       while (currentDate <= endDate) {
@@ -389,7 +389,7 @@ export default function AnalyticsPage() {
       const startDate = new Date()
       startDate.setMonth(startDate.getMonth() - periodMonths)
       
-      const monthsData = []
+      const monthsData: { month: string; year: number; cards: { [key: string]: number } }[] = []
       const currentDate = new Date(startDate)
       
       while (currentDate <= endDate) {
@@ -576,7 +576,7 @@ export default function AnalyticsPage() {
   const loadNewIndicators = async () => {
     try {
       const currentYear = selectedYear
-      const monthsData = []
+      const monthsData: any[] = []
       
       // Cargar datos de todos los meses del año
       for (let month = 1; month <= 12; month++) {
@@ -737,7 +737,7 @@ export default function AnalyticsPage() {
       const startDate = new Date()
       startDate.setMonth(startDate.getMonth() - 3) // Últimos 3 meses
       
-      const anomaliesFound = []
+      const anomaliesFound: any[] = []
       const currentDate = new Date(startDate)
       
       while (currentDate <= endDate) {
@@ -753,8 +753,8 @@ export default function AnalyticsPage() {
           
           // Detectar transacciones inusuales (>3 desviaciones estándar)
           const amounts = transactions.map((t: any) => Math.abs(Number(t.amountArs) || 0))
-          const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length
-          const variance = amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / amounts.length
+          const mean = amounts.reduce((a: number, b: number) => a + b, 0) / amounts.length
+          const variance = amounts.reduce((a: number, b: number) => a + Math.pow(b - mean, 2), 0) / amounts.length
           const stdDev = Math.sqrt(variance)
           
           transactions.forEach((transaction: any) => {

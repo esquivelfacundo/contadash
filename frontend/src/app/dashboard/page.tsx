@@ -428,7 +428,7 @@ export default function DashboardPage() {
       
       let transactions = []
       let filteredTransactions = []
-      let transactionTotals = {}
+      let transactionTotals: Record<string, any> = {}
       
       try {
         // Intentar obtener transacciones del mes seleccionado
@@ -445,7 +445,7 @@ export default function DashboardPage() {
         filteredTransactions = transactions.filter((t: any) => t.type === type)
         
         // Crear un mapa de totales por categoría desde las transacciones
-        transactionTotals = filteredTransactions.reduce((acc: any, transaction: any) => {
+        transactionTotals = filteredTransactions.reduce((acc: Record<string, any>, transaction: any) => {
           const categoryId = transaction.category?.id || 'no-category'
           
           if (!acc[categoryId]) {
@@ -1620,7 +1620,7 @@ export default function DashboardPage() {
                                 currency: currency,
                                 minimumFractionDigits: 0,
                               });
-                              return `${context.dataset.label}: ${formatter.format(value)}`;
+                              return `${context.dataset.label}: ${formatter.format(value || 0)}`;
                             }
                           }
                         },
@@ -1629,7 +1629,6 @@ export default function DashboardPage() {
                         x: {
                           grid: {
                             color: 'rgba(255, 255, 255, 0.1)',
-                            drawBorder: false,
                           },
                           ticks: {
                             color: '#94A3B8',
@@ -1641,7 +1640,6 @@ export default function DashboardPage() {
                         y: {
                           grid: {
                             color: 'rgba(255, 255, 255, 0.1)',
-                            drawBorder: false,
                           },
                           ticks: {
                             color: '#94A3B8',
