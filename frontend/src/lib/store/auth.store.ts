@@ -48,7 +48,6 @@ export const useAuthStore = create<AuthState>()(
             })
           }
         } catch (error) {
-          console.error('Logout error:', error)
         } finally {
           // Always clear local auth state
           localStorage.removeItem('token')

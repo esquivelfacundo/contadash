@@ -37,6 +37,8 @@ import {
   Visibility,
   Repeat,
   History,
+  Search,
+  FilterList,
 } from '@mui/icons-material'
 import DashboardLayout from '@/components/DashboardLayout'
 import IncomeTransactionDialog from '@/components/IncomeTransactionDialog'
@@ -71,8 +73,14 @@ export default function MonthlyPage() {
   const [documentToView, setDocumentToView] = useState<string | null>(null)
   const [recurringModalOpen, setRecurringModalOpen] = useState(false)
   const [historyModalOpen, setHistoryModalOpen] = useState(false)
-  const [currentDolarRate, setCurrentDolarRate] = useState<number>(1000)
-  const [currentApiDolarRate, setCurrentApiDolarRate] = useState<number>(1000)
+  const [currentDolarRate, setCurrentDolarRate] = useState<number | null>(null)
+  const [currentApiDolarRate, setCurrentApiDolarRate] = useState<number | null>(null)
+  
+  // Estados para filtros
+  const [searchText, setSearchText] = useState('')
+  const [filterCategory, setFilterCategory] = useState('all')
+  const [filterClient, setFilterClient] = useState('all')
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState('all')
 
   useEffect(() => {
     loadMonthlyData()
@@ -86,8 +94,7 @@ export default function MonthlyPage() {
         const rate = await exchangeApi.getDolarBlue()
         setCurrentApiDolarRate(rate)
       } catch (error) {
-        console.error('Error loading current API rate:', error)
-        setCurrentApiDolarRate(1000)
+        // No establecer valor por defecto, dejar como null
       }
     }
     loadCurrentApiRate()
@@ -112,13 +119,12 @@ export default function MonthlyPage() {
         setCurrentDolarRate(rate)
       }
     } catch (err) {
-      console.error('Error loading dolar rate:', err)
       // Fallback to current rate
       try {
         const rate = await exchangeApi.getDolarBlue()
         setCurrentDolarRate(rate)
       } catch {
-        setCurrentDolarRate(1000)
+        // No establecer valor por defecto, dejar como null
       }
     }
   }
@@ -131,7 +137,24 @@ export default function MonthlyPage() {
       // Get transactions for the selected month with credit card placeholders
       const data = await transactionsApi.getMonthlyWithCreditCards(month, year)
 
-      setMonthlyData(data.transactions)
+      // Filtrar placeholders que ya tienen una transacción real asociada
+      // Un placeholder se considera duplicado si existe una transacción real con el mismo creditCardId y fecha
+      const filteredTransactions = data.transactions.filter((transaction: any) => {
+        if (!transaction.isPlaceholder) {
+          return true // Mantener todas las transacciones reales
+        }
+        
+        // Para placeholders, verificar si existe una transacción real con el mismo creditCardId
+        const hasDuplicate = data.transactions.some((t: any) => 
+          !t.isPlaceholder && 
+          t.creditCardId === transaction.creditCardId &&
+          new Date(t.date).toDateString() === new Date(transaction.date).toDateString()
+        )
+        
+        return !hasDuplicate // Solo mantener el placeholder si NO hay duplicado
+      })
+
+      setMonthlyData(filteredTransactions)
 
       // Calculate year summary
       const yearData = await transactionsApi.getStats(undefined, year)
@@ -240,8 +263,66 @@ export default function MonthlyPage() {
   }
 
   // Separate income and expense transactions
-  const incomeTransactions = monthlyData.filter(t => t.type === 'INCOME')
-  const expenseTransactions = monthlyData.filter(t => t.type === 'EXPENSE')
+  const allIncomeTransactions = monthlyData.filter(t => t.type === 'INCOME')
+  const allExpenseTransactions = monthlyData.filter(t => t.type === 'EXPENSE')
+  
+  // Función de filtrado
+  const applyFilters = (transactions: any[]) => {
+    return transactions.filter(t => {
+      // Filtro de texto (búsqueda en descripción)
+      if (searchText && !t.description?.toLowerCase().includes(searchText.toLowerCase())) {
+        return false
+      }
+      
+      // Filtro de categoría
+      if (filterCategory !== 'all' && t.categoryId !== filterCategory) {
+        return false
+      }
+      
+      // Filtro de cliente (solo para ingresos)
+      if (filterClient !== 'all' && t.clientId !== filterClient) {
+        return false
+      }
+      
+      // Filtro de método de pago
+      if (filterPaymentMethod !== 'all' && t.paymentMethod !== filterPaymentMethod) {
+        return false
+      }
+      
+      return true
+    })
+  }
+  
+  // Aplicar filtros
+  const incomeTransactions = applyFilters(allIncomeTransactions)
+  const expenseTransactions = applyFilters(allExpenseTransactions)
+  
+  // Obtener listas únicas para los filtros
+  const uniqueIncomeCategories = Array.from(
+    new Map(
+      allIncomeTransactions
+        .filter(t => t.category)
+        .map(t => [t.category.id, t.category])
+    ).values()
+  )
+  
+  const uniqueExpenseCategories = Array.from(
+    new Map(
+      allExpenseTransactions
+        .filter(t => t.category)
+        .map(t => [t.category.id, t.category])
+    ).values()
+  )
+  
+  const uniqueClients = Array.from(
+    new Map(
+      allIncomeTransactions
+        .filter(t => t.client)
+        .map(t => [t.client.id, t.client])
+    ).values()
+  )
+  
+  const uniquePaymentMethods = Array.from(new Set(monthlyData.map(t => t.paymentMethod).filter(Boolean)))
 
   // Calculate month totals
   const monthIncome = incomeTransactions.reduce((sum, t) => sum + Number(t.amountArs), 0)
@@ -365,7 +446,7 @@ export default function MonthlyPage() {
                     {formatCurrency(yearSummary.income.ars)}
                   </Typography>
                   <Typography variant="caption" color="rgba(255,255,255,0.9)">
-                    {formatUSD(yearSummary.income.ars / currentApiDolarRate)}
+                    {currentApiDolarRate !== null ? formatUSD(yearSummary.income.ars / currentApiDolarRate) : '-'}
                   </Typography>
                 </CardContent>
               </Card>
@@ -386,7 +467,7 @@ export default function MonthlyPage() {
                     {formatCurrency(yearSummary.expense.ars)}
                   </Typography>
                   <Typography variant="caption" color="rgba(255,255,255,0.9)">
-                    {formatUSD(yearSummary.expense.ars / currentApiDolarRate)}
+                    {currentApiDolarRate !== null ? formatUSD(yearSummary.expense.ars / currentApiDolarRate) : '-'}
                   </Typography>
                 </CardContent>
               </Card>
@@ -394,7 +475,7 @@ export default function MonthlyPage() {
             <Grid item xs={12} md={4}>
               <Card 
                 sx={{ 
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
                   color: 'white',
                   border: 'none',
                 }}
@@ -407,7 +488,7 @@ export default function MonthlyPage() {
                     {formatCurrency(yearSummary.balance.ars)}
                   </Typography>
                   <Typography variant="caption" color="rgba(255,255,255,0.9)">
-                    {formatUSD(yearSummary.balance.ars / currentApiDolarRate)}
+                    {currentApiDolarRate !== null ? formatUSD(yearSummary.balance.ars / currentApiDolarRate) : '-'}
                   </Typography>
                 </CardContent>
               </Card>
@@ -448,7 +529,7 @@ export default function MonthlyPage() {
               <AttachMoney sx={{ color: '#3B82F6' }} />
               <Box>
                 <Typography variant="body2" fontWeight="bold" color="white">
-                  Cotización Dólar Blue: ${currentDolarRate.toFixed(2)}
+                  Cotización Dólar Blue: {currentDolarRate !== null ? `$${currentDolarRate.toFixed(2)}` : 'Cargando...'}
                 </Typography>
                 <Typography variant="caption">
                   {(() => {
@@ -494,6 +575,9 @@ export default function MonthlyPage() {
                       year > today.getFullYear() || 
                       (year === today.getFullYear() && selectedMonth >= today.getMonth())
                     
+                    if (currentDolarRate === null) {
+                      return 'Cargando cotización...'
+                    }
                     if (isCurrentOrFutureMonth) {
                       return `Cotización actual: ${formatUSD(monthIncome / currentDolarRate)}`
                     } else {
@@ -501,21 +585,6 @@ export default function MonthlyPage() {
                     }
                   })()}
                 </Typography>
-                {(() => {
-                  const today = new Date()
-                  const isCurrentOrFutureMonth = 
-                    year > today.getFullYear() || 
-                    (year === today.getFullYear() && selectedMonth >= today.getMonth())
-                  
-                  if (isCurrentOrFutureMonth) {
-                    return (
-                      <Typography variant="caption" color="rgba(255,255,255,0.7)">
-                        Registrado: {formatUSD(monthIncome / currentDolarRate)}
-                      </Typography>
-                    )
-                  }
-                  return null
-                })()}
               </CardContent>
             </Card>
           </Grid>
@@ -541,6 +610,9 @@ export default function MonthlyPage() {
                       year > today.getFullYear() || 
                       (year === today.getFullYear() && selectedMonth >= today.getMonth())
                     
+                    if (currentDolarRate === null) {
+                      return 'Cargando cotización...'
+                    }
                     if (isCurrentOrFutureMonth) {
                       return `Cotización actual: ${formatUSD(monthExpense / currentDolarRate)}`
                     } else {
@@ -548,21 +620,6 @@ export default function MonthlyPage() {
                     }
                   })()}
                 </Typography>
-                {(() => {
-                  const today = new Date()
-                  const isCurrentOrFutureMonth = 
-                    year > today.getFullYear() || 
-                    (year === today.getFullYear() && selectedMonth >= today.getMonth())
-                  
-                  if (isCurrentOrFutureMonth) {
-                    return (
-                      <Typography variant="caption" color="rgba(255,255,255,0.7)">
-                        Registrado: {formatUSD(monthExpense / currentDolarRate)}
-                      </Typography>
-                    )
-                  }
-                  return null
-                })()}
               </CardContent>
             </Card>
           </Grid>
@@ -588,6 +645,9 @@ export default function MonthlyPage() {
                       year > today.getFullYear() || 
                       (year === today.getFullYear() && selectedMonth >= today.getMonth())
                     
+                    if (currentDolarRate === null) {
+                      return 'Cargando cotización...'
+                    }
                     if (isCurrentOrFutureMonth) {
                       return `Cotización actual: ${formatUSD(monthBalance / currentDolarRate)}`
                     } else {
@@ -595,21 +655,6 @@ export default function MonthlyPage() {
                     }
                   })()}
                 </Typography>
-                {(() => {
-                  const today = new Date()
-                  const isCurrentOrFutureMonth = 
-                    year > today.getFullYear() || 
-                    (year === today.getFullYear() && selectedMonth >= today.getMonth())
-                  
-                  if (isCurrentOrFutureMonth) {
-                    return (
-                      <Typography variant="caption" color="rgba(255,255,255,0.7)">
-                        Registrado: {formatUSD(monthBalance / currentDolarRate)}
-                      </Typography>
-                    )
-                  }
-                  return null
-                })()}
               </CardContent>
             </Card>
           </Grid>
@@ -657,6 +702,89 @@ export default function MonthlyPage() {
                 Nuevo Ingreso
               </Button>
             </Box>
+            
+            {/* Filtros para Ingresos */}
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                size="small"
+                placeholder="Buscar por descripción..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                }}
+                sx={{ minWidth: 250 }}
+              />
+              
+              <TextField
+                select
+                size="small"
+                label="Categoría"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                sx={{ minWidth: 150 }}
+              >
+                <MenuItem value="all">Todas</MenuItem>
+                {uniqueIncomeCategories.map((cat: any) => (
+                  <MenuItem key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              
+              <TextField
+                select
+                size="small"
+                label="Cliente"
+                value={filterClient}
+                onChange={(e) => setFilterClient(e.target.value)}
+                sx={{ minWidth: 150 }}
+              >
+                <MenuItem value="all">Todos</MenuItem>
+                {uniqueClients.map((client: any) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.company || client.name || 'Sin nombre'}
+                  </MenuItem>
+                ))}
+              </TextField>
+              
+              <TextField
+                select
+                size="small"
+                label="Método de Pago"
+                value={filterPaymentMethod}
+                onChange={(e) => setFilterPaymentMethod(e.target.value)}
+                sx={{ minWidth: 150 }}
+              >
+                <MenuItem value="all">Todos</MenuItem>
+                <MenuItem value="CASH">💵 Efectivo</MenuItem>
+                <MenuItem value="MERCADOPAGO">💳 MercadoPago</MenuItem>
+                <MenuItem value="BANK_ACCOUNT">🏦 Cuenta Bancaria</MenuItem>
+                <MenuItem value="CRYPTO">₿ Criptomoneda</MenuItem>
+              </TextField>
+              
+              {(searchText || filterCategory !== 'all' || filterClient !== 'all' || filterPaymentMethod !== 'all') && (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setSearchText('')
+                    setFilterCategory('all')
+                    setFilterClient('all')
+                    setFilterPaymentMethod('all')
+                  }}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+              
+              <Chip 
+                label={`${incomeTransactions.length} de ${allIncomeTransactions.length}`}
+                size="small"
+                color="primary"
+              />
+            </Box>
+            
             {loading ? (
               <Box display="flex" justifyContent="center" py={4}>
                 <CircularProgress />
@@ -723,11 +851,11 @@ export default function MonthlyPage() {
                         </TableCell>
                         <TableCell align="right">
                           <Typography fontWeight="bold" color="success.dark">
-                            {formatUSD(Number(transaction.amountArs) / currentDolarRate)}
+                            {currentDolarRate !== null ? formatUSD(Number(transaction.amountArs) / currentDolarRate) : '-'}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
-                          ${currentDolarRate.toFixed(2)}
+                          {currentDolarRate !== null ? `$${currentDolarRate.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell align="center">
                           {transaction.attachmentUrl && (
@@ -773,7 +901,7 @@ export default function MonthlyPage() {
                       </TableCell>
                       <TableCell align="right" sx={{ borderBottom: 'none' }}>
                         <Typography fontWeight="bold" color="#10B981">
-                          {formatUSD(monthIncome / currentDolarRate)}
+                          {currentDolarRate !== null ? formatUSD(monthIncome / currentDolarRate) : '-'}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ borderBottom: 'none' }} />
@@ -807,6 +935,72 @@ export default function MonthlyPage() {
                 Nuevo Egreso
               </Button>
             </Box>
+            
+            {/* Filtros para Egresos */}
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                size="small"
+                placeholder="Buscar por descripción..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+                }}
+                sx={{ minWidth: 250 }}
+              />
+              
+              <TextField
+                select
+                size="small"
+                label="Categoría"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                sx={{ minWidth: 150 }}
+              >
+                <MenuItem value="all">Todas</MenuItem>
+                {uniqueExpenseCategories.map((cat: any) => (
+                  <MenuItem key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              
+              <TextField
+                select
+                size="small"
+                label="Método de Pago"
+                value={filterPaymentMethod}
+                onChange={(e) => setFilterPaymentMethod(e.target.value)}
+                sx={{ minWidth: 150 }}
+              >
+                <MenuItem value="all">Todos</MenuItem>
+                <MenuItem value="CASH">💵 Efectivo</MenuItem>
+                <MenuItem value="MERCADOPAGO">💳 MercadoPago</MenuItem>
+                <MenuItem value="BANK_ACCOUNT">🏦 Cuenta Bancaria</MenuItem>
+                <MenuItem value="CRYPTO">₿ Criptomoneda</MenuItem>
+              </TextField>
+              
+              {(searchText || filterCategory !== 'all' || filterPaymentMethod !== 'all') && (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setSearchText('')
+                    setFilterCategory('all')
+                    setFilterPaymentMethod('all')
+                  }}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+              
+              <Chip 
+                label={`${expenseTransactions.length} de ${allExpenseTransactions.length}`}
+                size="small"
+                color="secondary"
+              />
+            </Box>
+            
             {loading ? (
               <Box display="flex" justifyContent="center" py={4}>
                 <CircularProgress />
@@ -873,11 +1067,11 @@ export default function MonthlyPage() {
                         </TableCell>
                         <TableCell align="right">
                           <Typography fontWeight="bold" color="error.dark">
-                            {formatUSD(Number(transaction.amountArs) / currentDolarRate)}
+                            {currentDolarRate !== null ? formatUSD(Number(transaction.amountArs) / currentDolarRate) : '-'}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
-                          ${currentDolarRate.toFixed(2)}
+                          {currentDolarRate !== null ? `$${currentDolarRate.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell align="center">
                           {transaction.attachmentUrl && (
@@ -923,7 +1117,7 @@ export default function MonthlyPage() {
                       </TableCell>
                       <TableCell align="right" sx={{ borderBottom: 'none' }}>
                         <Typography fontWeight="bold" color="#EF4444">
-                          {formatUSD(monthExpense / currentDolarRate)}
+                          {currentDolarRate !== null ? formatUSD(monthExpense / currentDolarRate) : '-'}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ borderBottom: 'none' }} />

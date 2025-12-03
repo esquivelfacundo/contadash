@@ -92,7 +92,6 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
       const data = await categoriesApi.getAll()
       setCategories(data)
     } catch (err) {
-      console.error('Error loading categories:', err)
     }
   }
 
@@ -101,7 +100,6 @@ export default function TransactionHistoryModal({ open, onClose }: TransactionHi
       const data = await clientsApi.getAll()
       setClients(data)
     } catch (err) {
-      console.error('Error loading clients:', err)
     }
   }
 

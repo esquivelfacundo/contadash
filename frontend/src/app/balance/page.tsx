@@ -24,6 +24,7 @@ import {
   TrendingUp,
   TrendingDown,
   AttachMoney,
+  Payment,
 } from '@mui/icons-material'
 import DashboardLayout from '@/components/DashboardLayout'
 import { transactionsApi } from '@/lib/api/transactions'
@@ -56,18 +57,28 @@ export default function BalancePage() {
     try {
       setLoading(true)
       
-      // Cargar todas las transacciones del año
-      const transactions = await transactionsApi.getAll({
-        year: year.toString(),
-        limit: '10000', // Obtener todas las transacciones
-      })
+      // Cargar todas las transacciones del año mes por mes para evitar límites
+      const allTransactions: any[] = []
+      
+      for (let month = 1; month <= 12; month++) {
+        try {
+          const monthTransactions = await transactionsApi.getAll({
+            year: year.toString(),
+            month: month.toString(),
+            limit: '1000', // Límite por mes
+          })
+          allTransactions.push(...(monthTransactions.transactions || []))
+        } catch (err) {
+        }
+      }
+      
 
       // Cargar cuentas bancarias
       const accounts = await bankAccountsApi.getAll()
       setBankAccounts(accounts)
 
       // Procesar transacciones por método de pago
-      const methodBalances = processTransactionsByPaymentMethod(transactions.transactions, accounts)
+      const methodBalances = processTransactionsByPaymentMethod(allTransactions, accounts)
       setPaymentMethodBalances(methodBalances)
 
     } catch (err: any) {
@@ -102,19 +113,23 @@ export default function BalancePage() {
     // Inicializar cuentas bancarias
     accounts.forEach(account => {
       const key = `BANK_ACCOUNT_${account.id}`
+      const initialBalance = Number(account.balance) || 0
       methodMap.set(key, {
         method: 'BANK_ACCOUNT',
         label: `${account.name} (${account.currency})`,
         icon: '🏦',
-        totalIncome: account.balance || 0, // Balance inicial
+        totalIncome: 0, // Se calculará con las transacciones
         totalExpense: 0,
-        balance: account.balance || 0,
+        balance: initialBalance,
         transactionCount: 0,
         bankAccount: account,
       })
     })
 
     // Procesar transacciones
+    let processedCount = 0
+    let unassignedCount = 0
+    
     transactions.forEach(transaction => {
       let key: string
 
@@ -137,11 +152,12 @@ export default function BalancePage() {
           })
         }
       } else {
-        key = 'UNKNOWN'
+        key = 'UNASSIGNED'
+        unassignedCount++
         if (!methodMap.has(key)) {
           methodMap.set(key, {
-            method: 'UNKNOWN',
-            label: 'Sin especificar',
+            method: 'UNASSIGNED',
+            label: 'Sin asignar',
             icon: '❓',
             totalIncome: 0,
             totalExpense: 0,
@@ -153,7 +169,8 @@ export default function BalancePage() {
 
       const methodBalance = methodMap.get(key)
       if (methodBalance) {
-        const amount = Number(transaction.amountArs)
+        processedCount++
+        const amount = Number(transaction.amountArs) || 0
         
         if (transaction.type === 'INCOME') {
           methodBalance.totalIncome += amount
@@ -165,36 +182,48 @@ export default function BalancePage() {
         
         // Para cuentas bancarias, calcular balance considerando el balance inicial
         if (methodBalance.method === 'BANK_ACCOUNT') {
-          methodBalance.balance = (methodBalance.bankAccount?.balance || 0) + methodBalance.totalIncome - methodBalance.totalExpense
+          const initialBalance = Number(methodBalance.bankAccount?.balance) || 0
+          const totalIncome = Number(methodBalance.totalIncome) || 0
+          const totalExpense = Number(methodBalance.totalExpense) || 0
+          methodBalance.balance = initialBalance + totalIncome - totalExpense
         } else {
-          methodBalance.balance = methodBalance.totalIncome - methodBalance.totalExpense
+          const totalIncome = Number(methodBalance.totalIncome) || 0
+          const totalExpense = Number(methodBalance.totalExpense) || 0
+          methodBalance.balance = totalIncome - totalExpense
         }
       }
     })
 
-    return Array.from(methodMap.values()).filter(method => 
+    
+    const results = Array.from(methodMap.values()).filter(method => 
       method.transactionCount > 0 || method.method === 'BANK_ACCOUNT'
     )
+    
+    results.forEach(method => {
+    })
+    
+    return results
   }
 
   const formatCurrency = (amount: number) => {
+    const validAmount = Number(amount) || 0
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: 'ARS',
       minimumFractionDigits: 0,
-    }).format(amount)
+    }).format(validAmount)
   }
 
   const getTotalBalance = () => {
-    return paymentMethodBalances.reduce((sum, method) => sum + method.balance, 0)
+    return paymentMethodBalances.reduce((sum, method) => sum + (Number(method.balance) || 0), 0)
   }
 
   const getTotalIncome = () => {
-    return paymentMethodBalances.reduce((sum, method) => sum + method.totalIncome, 0)
+    return paymentMethodBalances.reduce((sum, method) => sum + (Number(method.totalIncome) || 0), 0)
   }
 
   const getTotalExpense = () => {
-    return paymentMethodBalances.reduce((sum, method) => sum + method.totalExpense, 0)
+    return paymentMethodBalances.reduce((sum, method) => sum + (Number(method.totalExpense) || 0), 0)
   }
 
   // Generate year options (current year and 5 years back)
@@ -285,7 +314,7 @@ export default function BalancePage() {
               <Grid item xs={12} md={3}>
                 <Card 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
                     color: 'white',
                     border: 'none',
                   }}
@@ -308,7 +337,7 @@ export default function BalancePage() {
               <Grid item xs={12} md={3}>
                 <Card 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
                     color: 'white',
                     border: 'none',
                   }}
@@ -331,14 +360,14 @@ export default function BalancePage() {
               <Grid item xs={12} md={3}>
                 <Card 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
                     color: 'white',
                     border: 'none',
                   }}
                 >
                   <CardContent>
                     <Box display="flex" alignItems="center" gap={2}>
-                      <AttachMoney sx={{ fontSize: 40 }} />
+                      <Payment sx={{ fontSize: 40 }} />
                       <Box>
                         <Typography color="rgba(255,255,255,0.8)" variant="body2">
                           Métodos de Pago

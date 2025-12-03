@@ -67,7 +67,6 @@ export default function DocumentViewer({
       const objectUrl = URL.createObjectURL(blob)
       setBlobUrl(objectUrl)
     } catch (err: any) {
-      console.error('Error loading file:', err)
       setError('Error al cargar el archivo')
     } finally {
       setLoading(false)

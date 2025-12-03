@@ -96,7 +96,7 @@ export default function TransactionFormDialog({
           clientId: '',
           description: '',
           amountArs: 0,
-          exchangeRate: 1000,
+          exchangeRate: 0,
           paymentMethod: 'CASH',
           bankAccountId: '',
         },
@@ -121,7 +121,6 @@ export default function TransactionFormDialog({
       const data = await categoriesApi.getAll()
       setCategories(data)
     } catch (err) {
-      console.error('Error loading categories:', err)
     }
   }
 
@@ -130,7 +129,6 @@ export default function TransactionFormDialog({
       const data = await clientsApi.getAll()
       setClients(data)
     } catch (err) {
-      console.error('Error loading clients:', err)
     }
   }
 
@@ -139,7 +137,6 @@ export default function TransactionFormDialog({
       const data = await bankAccountsApi.getAll()
       setBankAccounts(data)
     } catch (err) {
-      console.error('Error loading bank accounts:', err)
     }
   }
 
@@ -169,7 +166,6 @@ export default function TransactionFormDialog({
       onSuccess()
       handleClose()
     } catch (err) {
-      console.error('Error saving transaction:', err)
     } finally {
       setLoading(false)
     }

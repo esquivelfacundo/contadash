@@ -107,7 +107,6 @@ export default function ReportsPage() {
       setClients(cls)
       setScheduledReports(reports)
     } catch (err: any) {
-      console.error('Error loading data:', err)
     }
   }
 

@@ -131,7 +131,7 @@ export default function TransactionFormDialogEnhanced({
           currency: 'ARS',
           amountArs: 0,
           amountUsd: 0,
-          exchangeRate: 1000,
+          exchangeRate: 0,
           isPaid: true,
           isRecurring: false,
           recurringFrequency: 'MONTHLY',
@@ -167,7 +167,6 @@ export default function TransactionFormDialogEnhanced({
       
       setValue('exchangeRate', rate)
     } catch (err) {
-      console.error('Error loading exchange rate:', err)
       // Mantener valor por defecto si falla
     }
   }
@@ -195,7 +194,7 @@ export default function TransactionFormDialogEnhanced({
           currency: 'ARS',
           amountArs: Number(transaction.amountArs) || 0,
           amountUsd: Number(transaction.amountUsd) || 0,
-          exchangeRate: Number(transaction.exchangeRate) || 1000,
+          exchangeRate: Number(transaction.exchangeRate) || 0,
           isPaid: transaction.isPaid ?? true,
           isRecurring: false,
           recurringFrequency: 'MONTHLY',
@@ -219,7 +218,7 @@ export default function TransactionFormDialogEnhanced({
           currency: 'ARS',
           amountArs: 0,
           amountUsd: 0,
-          exchangeRate: 1000,
+          exchangeRate: 0,
           isPaid: true,
           isRecurring: false,
           recurringFrequency: 'MONTHLY',
@@ -256,7 +255,6 @@ export default function TransactionFormDialogEnhanced({
       const data = await categoriesApi.getAll()
       setCategories(data)
     } catch (err) {
-      console.error('Error loading categories:', err)
     }
   }
 
@@ -265,7 +263,6 @@ export default function TransactionFormDialogEnhanced({
       const data = await clientsApi.getAll()
       setClients(data)
     } catch (err) {
-      console.error('Error loading clients:', err)
     }
   }
 
@@ -274,7 +271,6 @@ export default function TransactionFormDialogEnhanced({
       const data = await creditCardsApi.getAll()
       setCreditCards(data.filter((c: any) => c.isActive))
     } catch (err) {
-      console.error('Error loading credit cards:', err)
     }
   }
 
@@ -295,7 +291,6 @@ export default function TransactionFormDialogEnhanced({
       setNewCategoryName('')
       setNewCategoryIcon('💰')
     } catch (err) {
-      console.error('Error creating category:', err)
     }
   }
 
@@ -394,9 +389,6 @@ export default function TransactionFormDialogEnhanced({
       onSuccess()
       handleClose()
     } catch (err: any) {
-      console.error('Error saving transaction:', err)
-      console.error('Error response:', err.response?.data)
-      console.error('Payload sent:', basePayload)
     } finally {
       setLoading(false)
     }
@@ -424,7 +416,6 @@ export default function TransactionFormDialogEnhanced({
       try {
         await recurringTransactionsApi.generateTransaction(recurringId, date)
       } catch (err) {
-        console.error('Error generating transaction for date:', date, err)
       }
     }
   }

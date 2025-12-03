@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
   Box,
@@ -71,7 +71,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       await useAuthStore.getState().logout()
       router.push('/login')
     } catch (error) {
-      console.error('Logout failed:', error)
       // Even if logout fails, redirect to login
       clearAuth()
       router.push('/login')

@@ -28,6 +28,7 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { analyticsApi } from '@/lib/api/analytics'
+import { COLORS } from '@/constants/colors'
 
 // Registrar componentes de Chart.js
 ChartJS.register(
@@ -56,7 +57,6 @@ export default function ProjectionsChart({ defaultMonths = 3 }: ProjectionsChart
       const result = await analyticsApi.getProjections(months)
       setData(result)
     } catch (error) {
-      console.error('Error loading projections:', error)
     } finally {
       setLoading(false)
     }
@@ -123,19 +123,19 @@ export default function ProjectionsChart({ defaultMonths = 3 }: ProjectionsChart
         {
           label: 'Ingresos',
           data: incomeData,
-          borderColor: '#10B981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderColor: COLORS.income.main,
+          backgroundColor: `${COLORS.income.main}20`,
           borderWidth: 3,
           pointRadius: 6,
           pointHoverRadius: 8,
-          pointBackgroundColor: '#10B981',
+          pointBackgroundColor: COLORS.income.main,
           pointBorderColor: '#1E293B',
           pointBorderWidth: 2,
-          pointHoverBackgroundColor: '#10B981',
+          pointHoverBackgroundColor: COLORS.income.main,
           pointHoverBorderColor: '#ffffff',
           pointHoverBorderWidth: 3,
           tension: 0.4,
-          fill: false,
+          fill: true,
           segment: {
             borderDash: (ctx: any) => {
               const historicalLength = historical.length
@@ -146,19 +146,19 @@ export default function ProjectionsChart({ defaultMonths = 3 }: ProjectionsChart
         {
           label: 'Egresos',
           data: expenseData,
-          borderColor: '#EF4444',
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          borderColor: COLORS.expense.main,
+          backgroundColor: `${COLORS.expense.main}20`,
           borderWidth: 3,
           pointRadius: 6,
           pointHoverRadius: 8,
-          pointBackgroundColor: '#EF4444',
+          pointBackgroundColor: COLORS.expense.main,
           pointBorderColor: '#1E293B',
           pointBorderWidth: 2,
-          pointHoverBackgroundColor: '#EF4444',
+          pointHoverBackgroundColor: COLORS.expense.main,
           pointHoverBorderColor: '#ffffff',
           pointHoverBorderWidth: 3,
           tension: 0.4,
-          fill: false,
+          fill: true,
           segment: {
             borderDash: (ctx: any) => {
               const historicalLength = historical.length
@@ -169,15 +169,15 @@ export default function ProjectionsChart({ defaultMonths = 3 }: ProjectionsChart
         {
           label: 'Balance',
           data: balanceData,
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderColor: COLORS.balance.main,
+          backgroundColor: `${COLORS.balance.main}20`,
           borderWidth: 3,
           pointRadius: 6,
           pointHoverRadius: 8,
-          pointBackgroundColor: '#3B82F6',
+          pointBackgroundColor: COLORS.balance.main,
           pointBorderColor: '#1E293B',
           pointBorderWidth: 2,
-          pointHoverBackgroundColor: '#3B82F6',
+          pointHoverBackgroundColor: COLORS.balance.main,
           pointHoverBorderColor: '#ffffff',
           pointHoverBorderWidth: 3,
           tension: 0.4,
@@ -277,7 +277,7 @@ export default function ProjectionsChart({ defaultMonths = 3 }: ProjectionsChart
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h6" fontWeight="bold" color="white" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <ShowChartIcon />
-            📈 Proyecciones Financieras
+            Proyecciones Financieras
           </Typography>
           <TextField
             select

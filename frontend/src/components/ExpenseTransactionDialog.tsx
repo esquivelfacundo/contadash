@@ -93,7 +93,7 @@ export default function ExpenseTransactionDialog({
           categoryId: '',
           description: '',
           amountArs: 0,
-          exchangeRate: 1000,
+          exchangeRate: 0,
           paymentMethod: 'CASH',
           bankAccountId: '',
           attachmentUrl: null,
@@ -106,17 +106,50 @@ export default function ExpenseTransactionDialog({
   const transactionDate = watch('date')
   const currency = exchangeRate === 1 ? 'USD' : 'ARS'
 
+  // Cargar datos cuando se abra el diálogo
   useEffect(() => {
     if (open) {
-      loadExpenseCategories()
-      loadBankAccounts()
-      
-      // Cargar cotización para transacciones nuevas
-      if (!transaction) {
-        loadExchangeRate()
+      // Cargar categorías y cuentas primero
+      const loadData = async () => {
+        await Promise.all([
+          loadExpenseCategories(),
+          loadBankAccounts()
+        ])
+        
+        // Después de cargar las categorías, resetear el formulario
+        if (transaction) {
+          // Editar transacción existente - cargar todos los datos
+          reset({
+            date: new Date(transaction.date).toISOString().split('T')[0],
+            categoryId: transaction.categoryId || '',
+            description: transaction.description || '',
+            amountArs: Number(transaction.amountArs) || 0,
+            exchangeRate: Number(transaction.exchangeRate) || 0,
+            paymentMethod: transaction.paymentMethod || 'CASH',
+            bankAccountId: transaction.bankAccountId || '',
+            attachmentUrl: transaction.attachmentUrl || null,
+          })
+        } else {
+          // Nueva transacción - valores por defecto
+          reset({
+            date: defaultDate
+              ? defaultDate.toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0],
+            categoryId: '',
+            description: '',
+            amountArs: 0,
+            exchangeRate: 0,
+            paymentMethod: 'CASH',
+            bankAccountId: '',
+            attachmentUrl: null,
+          })
+          loadExchangeRate()
+        }
       }
+      
+      loadData()
     }
-  }, [open])
+  }, [open, transaction])
 
   // Cargar cotización cuando cambie la fecha (tanto para creación como edición)
   useEffect(() => {
@@ -132,7 +165,6 @@ export default function ExpenseTransactionDialog({
       // Filtrar solo categorías de egresos
       setCategories(data.filter((c: any) => c.type === 'EXPENSE'))
     } catch (err) {
-      console.error('Error loading expense categories:', err)
     }
   }
 
@@ -141,7 +173,6 @@ export default function ExpenseTransactionDialog({
       const data = await bankAccountsApi.getAll()
       setBankAccounts(data)
     } catch (err) {
-      console.error('Error loading bank accounts:', err)
     }
   }
 
@@ -154,11 +185,6 @@ export default function ExpenseTransactionDialog({
       const [year, month, day] = selectedDate.split('-').map(Number)
       const transactionDateObj = new Date(year, month - 1, day) // month - 1 porque Date usa 0-indexado
       
-      console.log('🔍 Loading exchange rate for date:', selectedDate)
-      console.log('📅 Today:', today.toISOString().split('T')[0])
-      console.log('📅 Transaction date:', transactionDateObj.toISOString().split('T')[0])
-      console.log('📅 Today month/year:', today.getMonth(), today.getFullYear())
-      console.log('📅 Transaction month/year:', transactionDateObj.getMonth(), transactionDateObj.getFullYear())
       
       // Determinar si es mes actual o futuro
       const isCurrentOrFutureMonth = 
@@ -166,13 +192,11 @@ export default function ExpenseTransactionDialog({
         (transactionDateObj.getFullYear() === today.getFullYear() && 
          transactionDateObj.getMonth() >= today.getMonth())
       
-      console.log('🔄 Is current or future month:', isCurrentOrFutureMonth)
       
       let rate: number
       
       if (isCurrentOrFutureMonth) {
         // Usar cotización actual para mes actual o futuro
-        console.log('💹 Using current rate')
         rate = await exchangeApi.getDolarBlue()
       } else {
         // Usar cotización histórica para meses pasados
@@ -184,27 +208,21 @@ export default function ExpenseTransactionDialog({
         )
         const dateStr = lastDayOfMonth.toISOString().split('T')[0]
         
-        console.log('📊 Using historical rate for:', dateStr)
         
         try {
           rate = await exchangeApi.getDolarBlueForDate(dateStr)
-          console.log('✅ Historical rate found:', rate)
         } catch (err) {
           // Fallback a cotización actual si no hay histórico
-          console.warn('⚠️ No historical rate found, using current rate:', err)
           rate = await exchangeApi.getDolarBlue()
         }
       }
       
-      console.log('💰 Final rate:', rate)
       
       // Actualizar el campo de cotización
       setValue('exchangeRate', rate)
       
     } catch (err) {
-      console.error('❌ Error loading exchange rate:', err)
-      // Fallback a cotización por defecto
-      setValue('exchangeRate', 1000)
+      // No establecer valor por defecto, dejar en 0 para que el usuario sepa que hay un error
     }
   }
 
@@ -218,15 +236,35 @@ export default function ExpenseTransactionDialog({
   const onSubmit = async (data: ExpenseTransactionForm) => {
     try {
       setLoading(true)
-      const payload = {
-        ...data,
+      
+      // Construir payload limpio sin campos undefined
+      const payload: any = {
         type: 'EXPENSE' as const,
+        description: data.description,
+        amountArs: data.amountArs,
         amountUsd: data.amountArs / data.exchangeRate,
-        bankAccountId: data.paymentMethod === 'BANK_ACCOUNT' ? data.bankAccountId : undefined,
-        attachmentUrl: data.attachmentUrl || undefined,
+        exchangeRate: data.exchangeRate,
+        date: new Date(data.date).toISOString(), // Convertir a ISO string
+        paymentMethod: data.paymentMethod,
       }
+      
+      // Solo agregar campos opcionales si tienen valor
+      if (data.categoryId) {
+        payload.categoryId = data.categoryId
+      }
+      if (data.paymentMethod === 'BANK_ACCOUNT' && data.bankAccountId) {
+        payload.bankAccountId = data.bankAccountId
+      }
+      if (data.attachmentUrl) {
+        payload.attachmentUrl = data.attachmentUrl
+      }
+      // Si la transacción original tenía creditCardId, preservarlo
+      if (transaction?.creditCardId) {
+        payload.creditCardId = transaction.creditCardId
+      }
+      
 
-      if (transaction) {
+      if (transaction && transaction.id) {
         await transactionsApi.update(transaction.id, payload)
       } else {
         await transactionsApi.create(payload)
@@ -234,8 +272,16 @@ export default function ExpenseTransactionDialog({
 
       onSuccess()
       handleClose()
-    } catch (err) {
-      console.error('Error saving expense transaction:', err)
+    } catch (err: any) {
+      
+      const fieldErrors = err.response?.data?.details?.fieldErrors
+      const errorMessage = fieldErrors 
+        ? Object.entries(fieldErrors).map(([field, errors]: [string, any]) => 
+            `${field}: ${errors.join(', ')}`
+          ).join('\n')
+        : err.response?.data?.error || err.message
+      
+      alert(`Error al guardar la transacción:\n${errorMessage}`)
     } finally {
       setLoading(false)
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Box,
   Typography,
@@ -24,6 +24,7 @@ import {
   Switch,
   FormControlLabel,
   Alert,
+  keyframes,
 } from '@mui/material'
 import {
   Chart as ChartJS,
@@ -46,6 +47,9 @@ import {
   ShowChart,
   Receipt,
   AccountBalance,
+  Folder,
+  People,
+  AccountBalanceWallet,
 } from '@mui/icons-material'
 
 // Registrar componentes de Chart.js
@@ -60,14 +64,17 @@ ChartJS.register(
   Filler
 )
 import DashboardLayout from '@/components/DashboardLayout'
+import SplashScreen from '@/components/SplashScreen'
+import { useAuthStore } from '@/lib/store/auth.store'
 import { analyticsApi } from '@/lib/api/analytics'
 import { categoriesApi } from '@/lib/api/categories'
 import { creditCardsApi } from '@/lib/api/credit-cards'
 import { clientsApi } from '@/lib/api/clients'
+import { bankAccountsApi } from '@/lib/api/bank-accounts'
 import { apiClient } from '@/lib/api/client'
 import PeriodComparison from '@/components/PeriodComparison'
 import ProjectionsChart from '@/components/ProjectionsChart'
-import { useAuthStore } from '@/lib/store/auth.store'
+import { COLORS } from '@/constants/colors'
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -78,6 +85,7 @@ export default function DashboardPage() {
   const { user } = useAuthStore()
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth() + 1
+  const [showSplash, setShowSplash] = useState(true)
   const [data, setData] = useState<any>(null)
   const [yearlySummary, setYearlySummary] = useState<any>(null)
   const [categoryData, setCategoryData] = useState<any>(null)
@@ -99,9 +107,17 @@ export default function DashboardPage() {
     incomeCategories: 0,
     expenseCategories: 0,
     clients: 0,
-    creditCards: 0
+    creditCards: 0,
+    bankAccounts: 0
   })
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null)
+  const gradientAnimation = useRef(0)
+  const [gradientOpacity, setGradientOpacity] = useState(1)
+
+  // Manejar el fin del splash screen
+  const handleSplashFinish = () => {
+    setShowSplash(false)
+  }
 
   // Función para calcular el transform de cada tarjeta basado en hover
   const getCardTransform = (cardIndex: number) => {
@@ -142,30 +158,47 @@ export default function DashboardPage() {
       const creditCards = await creditCardsApi.getAll()
       const activeCards = creditCards.filter((c: any) => c.isActive).length
 
+      // Cargar cuentas bancarias
+      const bankAccounts = await bankAccountsApi.getAll()
+      const activeBankAccounts = bankAccounts.filter((b: any) => b.isActive).length
+
       setStats({
         incomeCategories,
         expenseCategories,
         clients: activeClients,
-        creditCards: activeCards
+        creditCards: activeCards,
+        bankAccounts: activeBankAccounts
       })
     } catch (err) {
-      console.error('Error loading stats:', err)
     }
   }
 
   // Carga inicial
   useEffect(() => {
     const loadInitialData = async () => {
-      await Promise.all([
-        loadStats(),
-        loadYearlySummary(),
-        loadDashboard(),
-        loadCategoryData(),
-        loadCreditCards()
-      ])
-      setLoading(false)
+      try {
+        await Promise.all([
+          loadStats(),
+          loadDashboard(),
+          loadYearlySummary(),
+          loadCategoryData(),
+          loadCreditCards()
+        ])
+      } catch (error) {
+      }
     }
     loadInitialData()
+    
+    // Animación del gradiente
+    const interval = setInterval(() => {
+      gradientAnimation.current = (gradientAnimation.current + 0.01) % 2
+      const opacity = gradientAnimation.current <= 1 
+        ? 1 - (gradientAnimation.current * 0.3)
+        : 0.7 + ((gradientAnimation.current - 1) * 0.3)
+      setGradientOpacity(opacity)
+    }, 50)
+    
+    return () => clearInterval(interval)
   }, [])
 
   // Cargar datos de categorías cuando cambien los filtros (sin recargar página)
@@ -181,10 +214,6 @@ export default function DashboardPage() {
       loadCreditCards()
     }
   }, [selectedCategoryMonth, selectedYear])
-
-  useEffect(() => {
-    loadChartData()
-  }, [selectedYear, showUSD, yearlySummary])
 
   // Resetear páginas cuando cambien los filtros
   useEffect(() => {
@@ -238,7 +267,6 @@ export default function DashboardPage() {
               monthlyConsumption
             }
           } catch (err) {
-            console.error(`Error loading transactions for card ${card.name}:`, err)
             return {
               ...card,
               monthlyConsumption: 0
@@ -247,9 +275,13 @@ export default function DashboardPage() {
         })
       )
       
-      setCreditCards(cardsWithConsumption)
+      // Ordenar por consumo mensual (mayor a menor)
+      const sortedCards = cardsWithConsumption.sort((a, b) => 
+        (b.monthlyConsumption || 0) - (a.monthlyConsumption || 0)
+      )
+      
+      setCreditCards(sortedCards)
     } catch (err) {
-      console.error('Error loading credit cards:', err)
       setCreditCards([])
     } finally {
       setCardsLoading(false)
@@ -261,145 +293,123 @@ export default function DashboardPage() {
       const response = await apiClient.get(`/analytics/yearly-summary?year=${selectedYear}`)
       setYearlySummary(response.data)
     } catch (err) {
-      console.error('Error loading yearly summary:', err)
     }
   }
 
-  const loadChartData = async () => {
-    try {
-      // Usar directamente los datos del yearly summary que ya tenemos
-      if (!yearlySummary) {
-        return
-      }
+  // ============================================
+  // GRÁFICO DE EVOLUCIÓN MENSUAL - RECONSTRUIDO
+  // ============================================
+  
+  /**
+   * Construye los datos del gráfico de evolución mensual
+   * Extrae datos de yearlySummary.monthlyBreakdown y los formatea para Chart.js
+   * 
+   * @returns Objeto con labels y datasets para Chart.js
+   */
+  const buildChartData = useCallback(() => {
+    // La estructura real es yearlySummary.months, NO monthlyBreakdown
+    if (!yearlySummary?.months) {
+      return null
+    }
 
-      const labels = MONTHS
-      const incomeData = []
-      const expenseData = []
-      const balanceData = []
+    const monthlyBreakdown = yearlySummary.months
+    const labels = MONTHS
+    const incomeData: number[] = []
+    const expenseData: number[] = []
+    const balanceData: number[] = []
+
+    // Procesar cada mes (1-12)
+    for (let month = 1; month <= 12; month++) {
+      const monthData = monthlyBreakdown.find((m: any) => m.month === month)
       
-      // Si hay monthlyBreakdown, usarlo; si no, obtener datos de transacciones mes por mes
-      const monthlyBreakdown = yearlySummary.monthlyBreakdown || []
-      
-      if (monthlyBreakdown.length > 0) {
-        // Usar datos del monthlyBreakdown
-        for (let month = 1; month <= 12; month++) {
-          const monthData = monthlyBreakdown.find((m: any) => m.month === month) || { 
-            income: 0, 
-            expense: 0,
-            incomeArs: 0,
-            expenseArs: 0 
-          }
-          
-          // Usar datos en ARS o convertir a USD (estimación: dividir por 1000)
-          const income = showUSD 
-            ? (monthData.incomeUsd || (monthData.incomeArs || monthData.income || 0) / 1000) 
-            : (monthData.incomeArs || monthData.income || 0)
-          const expense = showUSD 
-            ? (monthData.expenseUsd || (monthData.expenseArs || monthData.expense || 0) / 1000) 
-            : (monthData.expenseArs || monthData.expense || 0)
-          const balance = income - expense
-          
-          incomeData.push(income)
-          expenseData.push(expense)
-          balanceData.push(balance)
-        }
-      } else {
-        // Si no hay monthlyBreakdown, obtener datos de transacciones mes por mes
+      if (monthData) {
+        // Extraer valores según la moneda seleccionada y forzar conversión a número
+        const income = showUSD 
+          ? parseFloat(monthData.income?.usd || 0)
+          : parseFloat(monthData.income?.ars || 0)
+        const expense = showUSD 
+          ? parseFloat(monthData.expense?.usd || 0)
+          : parseFloat(monthData.expense?.ars || 0)
         
-        for (let month = 1; month <= 12; month++) {
-          try {
-            const response = await apiClient.get('/transactions', {
-              params: { month, year: selectedYear }
-            })
-            
-            const transactions = response.data.transactions || response.data || []
-            const incomeTransactions = transactions.filter((t: any) => t.type === 'INCOME')
-            const expenseTransactions = transactions.filter((t: any) => t.type === 'EXPENSE')
-            
-            const monthIncome = incomeTransactions.reduce((sum: number, t: any) => 
-              sum + (Number(t.amountArs) || 0), 0)
-            const monthExpense = expenseTransactions.reduce((sum: number, t: any) => 
-              sum + (Number(t.amountArs) || 0), 0)
-            
-            const income = showUSD ? monthIncome / 1000 : monthIncome
-            const expense = showUSD ? monthExpense / 1000 : monthExpense
-            const balance = income - expense
-            
-            incomeData.push(income)
-            expenseData.push(expense)
-            balanceData.push(balance)
-          } catch (err) {
-            // Si falla la carga de un mes, usar 0
-            incomeData.push(0)
-            expenseData.push(0)
-            balanceData.push(0)
-          }
-        }
+        incomeData.push(income)
+        expenseData.push(expense)
+        balanceData.push(income - expense)
+      } else {
+        // Mes sin datos
+        incomeData.push(0)
+        expenseData.push(0)
+        balanceData.push(0)
       }
-      
-      setChartData({
-        labels,
-        datasets: [
-          {
-            label: 'Ingresos',
-            data: incomeData,
-            borderColor: '#10B981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: false,
-          },
-          {
-            label: 'Egresos',
-            data: expenseData,
-            borderColor: '#EF4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            tension: 0.4,
-            fill: false,
-          },
-          {
-            label: 'Balance',
-            data: balanceData,
-            borderColor: '#3B82F6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: false,
-          },
-        ],
-      })
-    } catch (err) {
-      console.error('Error loading chart data:', err)
-      // En caso de error, crear gráfico con datos vacíos
-      setChartData({
-        labels: MONTHS,
-        datasets: [
-          {
-            label: 'Ingresos',
-            data: new Array(12).fill(0),
-            borderColor: '#10B981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: false,
-          },
-          {
-            label: 'Egresos',
-            data: new Array(12).fill(0),
-            borderColor: '#EF4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            tension: 0.4,
-            fill: false,
-          },
-          {
-            label: 'Balance',
-            data: new Array(12).fill(0),
-            borderColor: '#3B82F6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: false,
-          },
-        ],
-      })
     }
-  }
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: incomeData,
+          borderColor: COLORS.income.main,
+          backgroundColor: `${COLORS.income.main}20`,
+          borderWidth: 3,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: COLORS.income.main,
+          pointBorderColor: '#1E293B',
+          pointBorderWidth: 2,
+        },
+        {
+          label: 'Egresos',
+          data: expenseData,
+          borderColor: COLORS.expense.main,
+          backgroundColor: `${COLORS.expense.main}20`,
+          borderWidth: 3,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: COLORS.expense.main,
+          pointBorderColor: '#1E293B',
+          pointBorderWidth: 2,
+        },
+        {
+          label: 'Balance',
+          data: balanceData,
+          borderColor: COLORS.balance.main,
+          backgroundColor: `${COLORS.balance.main}20`,
+          borderWidth: 3,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: COLORS.balance.main,
+          pointBorderColor: '#1E293B',
+          pointBorderWidth: 2,
+        },
+      ],
+    }
+  }, [yearlySummary, showUSD])
+
+  /**
+   * Efecto para actualizar chartData cuando cambien los datos o la moneda
+   */
+  useEffect(() => {
+    if (!yearlySummary?.months) {
+      setChartData(null)
+      return
+    }
+    
+    // Esperar a que el componente esté montado
+    const timer = setTimeout(() => {
+      const data = buildChartData()
+      if (data) {
+        setChartData(data)
+      }
+    }, 200)
+    
+    return () => clearTimeout(timer)
+  }, [yearlySummary, showUSD])
 
   const loadCategoryData = async () => {
     try {
@@ -498,6 +508,11 @@ export default function DashboardPage() {
     return ((current - previous) / previous) * 100
   }
 
+  // Mostrar splash screen al inicio
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -511,150 +526,254 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <Box sx={{ minHeight: '100vh' }}>
-        {/* Header con saludo mejorado */}
+        {/* Card de Bienvenida con Gradiente Animado */}
         <Card sx={{ bgcolor: '#1E293B', border: 'none', mb: 3, overflow: 'hidden', position: 'relative' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Grid container spacing={3} alignItems="center">
+          {/* Gradiente animado de fondo */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(139, 92, 246, 0.2) 50%, rgba(245, 158, 11, 0.2) 100%)',
+              opacity: gradientOpacity,
+              transition: 'opacity 0.3s ease',
+              zIndex: 0,
+            }}
+          />
+          
+          <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+            <Grid container spacing={3}>
+              {/* Columna Izquierda - Texto y Métricas */}
               <Grid item xs={12} md={8}>
-                <Box>
-                  <Typography variant="h5" color="white" sx={{ mb: 1 }}>
-                    {user?.name || 'Usuario'}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: '600px' }}>
-                    Aquí tienes un resumen completo de tus finanzas. Revisa tus ingresos, egresos y el balance general de tu negocio.
-                  </Typography>
-                  
-                  {/* Métricas rápidas */}
-                  <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid item xs={6} sm={3}>
-                      <Box>
-                        <Typography variant="h6" fontWeight="bold" color="#10B981">
-                          {stats.incomeCategories}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Categorías de Ingresos
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <Box>
-                        <Typography variant="h6" fontWeight="bold" color="#EF4444">
-                          {stats.expenseCategories}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Categorías de Egresos
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <Box>
-                        <Typography variant="h6" fontWeight="bold" color="#3B82F6">
-                          {stats.clients}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Clientes Activos
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <Box>
-                        <Typography variant="h6" fontWeight="bold" color="#F59E0B">
-                          {stats.creditCards}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Tarjetas de Crédito
-                        </Typography>
-                      </Box>
-                    </Grid>
+                <Typography variant="h4" color="white" sx={{ mb: 1, fontWeight: 600 }}>
+                  <Box component="span" sx={{ fontWeight: 400 }}>Hola, </Box>
+                  {user?.name || 'Usuario Demo'}
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Aquí tienes un resumen completo de tus finanzas. Revisa tus ingresos, egresos y el balance general de tu negocio.
+                </Typography>
+                
+                {/* Métricas rápidas */}
+                <Grid container spacing={1.5}>
+                  <Grid item xs={6} sm={2.4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold" color="#10B981">
+                        {stats.incomeCategories}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Categorías de Ingresos
+                      </Typography>
+                    </Box>
                   </Grid>
+                  <Grid item xs={6} sm={2.4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold" color="#EF4444">
+                        {stats.expenseCategories}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Categorías de Egresos
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={2.4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold" color="#3B82F6">
+                        {stats.clients}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Clientes Activos
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={2.4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold" color="#F59E0B">
+                        {stats.creditCards}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Tarjetas de Crédito
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={2.4}>
+                    <Box>
+                      <Typography variant="h6" fontWeight="bold" color="#8B5CF6">
+                        {stats.bankAccounts}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Cuentas Bancarias
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Grid>
 
-                  <Box display="flex" gap={2}>
-                    <Button 
-                      variant="contained" 
+              {/* Columna Derecha - Botones de Acceso Rápido */}
+              <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                  <Typography 
+                    variant="caption" 
+                    color="white" 
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      mb: 0.75,
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.5px',
+                      textAlign: 'left'
+                    }}
+                  >
+                    Administrá tu Dash
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      gap: 1,
+                      justifyContent: { xs: 'space-around', md: 'center' },
+                      alignItems: 'center',
+                      width: '100%',
+                    }}
+                  >
+                    <Box 
                       sx={{ 
-                        bgcolor: '#10B981', 
-                        '&:hover': { bgcolor: '#059669' },
-                        textTransform: 'none',
-                        fontWeight: 600
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        '&:hover .icon-box': {
+                          borderColor: '#10B981',
+                          bgcolor: 'rgba(16, 185, 129, 0.1)',
+                        }
                       }}
-                      onClick={() => window.location.href = '/monthly'}
+                      onClick={() => window.location.href = '/settings?tab=categories'}
                     >
-                      Ver Movimientos
-                    </Button>
-                    <Button 
-                      variant="outlined" 
+                      <Box 
+                        className="icon-box"
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 1.5,
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 0.5,
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <Folder sx={{ fontSize: 22, color: 'white' }} />
+                      </Box>
+                      <Typography variant="caption" color="white" sx={{ fontSize: '0.625rem', textAlign: 'center' }}>
+                        Categorías
+                      </Typography>
+                    </Box>
+
+                    <Box 
                       sx={{ 
-                        borderColor: '#334155',
-                        color: 'white',
-                        '&:hover': { borderColor: '#475569', bgcolor: '#334155' },
-                        textTransform: 'none',
-                        fontWeight: 600
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        '&:hover .icon-box': {
+                          borderColor: '#3B82F6',
+                          bgcolor: 'rgba(59, 130, 246, 0.1)',
+                        }
                       }}
-                      onClick={() => window.location.href = '/analytics'}
+                      onClick={() => window.location.href = '/settings?tab=clients'}
                     >
-                      Ver Analytics
-                    </Button>
+                      <Box 
+                        className="icon-box"
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 1.5,
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 0.5,
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <People sx={{ fontSize: 22, color: 'white' }} />
+                      </Box>
+                      <Typography variant="caption" color="white" sx={{ fontSize: '0.625rem', textAlign: 'center' }}>
+                        Clientes
+                      </Typography>
+                    </Box>
+
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        '&:hover .icon-box': {
+                          borderColor: '#F59E0B',
+                          bgcolor: 'rgba(245, 158, 11, 0.1)',
+                        }
+                      }}
+                      onClick={() => window.location.href = '/settings?tab=creditCards'}
+                    >
+                      <Box 
+                        className="icon-box"
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 1.5,
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 0.5,
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <CreditCard sx={{ fontSize: 22, color: 'white' }} />
+                      </Box>
+                      <Typography variant="caption" color="white" sx={{ fontSize: '0.625rem', textAlign: 'center' }}>
+                        Tarjetas
+                      </Typography>
+                    </Box>
+
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        '&:hover .icon-box': {
+                          borderColor: '#8B5CF6',
+                          bgcolor: 'rgba(139, 92, 246, 0.1)',
+                        }
+                      }}
+                      onClick={() => window.location.href = '/settings?tab=bankAccounts'}
+                    >
+                      <Box 
+                        className="icon-box"
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 1.5,
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 0.5,
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <AccountBalanceWallet sx={{ fontSize: 22, color: 'white' }} />
+                      </Box>
+                      <Typography variant="caption" color="white" sx={{ fontSize: '0.625rem', textAlign: 'center' }}>
+                        Bancos
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
               </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <Box 
-                  sx={{ 
-                    textAlign: 'center',
-                    position: 'relative',
-                    display: { xs: 'none', md: 'block' }
-                  }}
-                >
-                  {/* Ilustración simple con CSS */}
-                  <Box
-                    sx={{
-                      width: 200,
-                      height: 150,
-                      mx: 'auto',
-                      position: 'relative',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 20,
-                        left: 20,
-                        width: 160,
-                        height: 100,
-                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                        borderRadius: 2,
-                        opacity: 0.8,
-                      },
-                      '&::after': {
-                        content: '"📊"',
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: '3rem',
-                        zIndex: 1,
-                      }
-                    }}
-                  />
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                    Panel de Control Financiero
-                  </Typography>
-                </Box>
-              </Grid>
             </Grid>
-
-            {/* Fondo decorativo */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 200,
-                height: 200,
-                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                borderRadius: '50%',
-                zIndex: 0,
-              }}
-            />
           </CardContent>
         </Card>
 
@@ -1129,6 +1248,7 @@ export default function DashboardPage() {
                           </Box>
                         )}
                         {creditCards && creditCards.length > 0 ? (
+                        <>
                         <Box sx={{ 
                           flexGrow: 1, 
                           display: 'flex', 
@@ -1344,23 +1464,31 @@ export default function DashboardPage() {
                             <Box 
                               sx={{
                                 position: 'absolute',
-                                bottom: -10,
-                                right: 10,
-                                zIndex: 0
+                                bottom: 8,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                zIndex: 10,
+                                bgcolor: 'rgba(15, 23, 42, 0.9)',
+                                px: 2,
+                                py: 0.5,
+                                borderRadius: 1,
+                                border: '1px solid rgba(255, 255, 255, 0.1)'
                               }}
                             >
                               <Typography 
                                 variant="caption" 
                                 sx={{ 
-                                  color: 'rgba(255,255,255,0.5)',
-                                  fontSize: '0.7rem'
+                                  color: '#10B981',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 500
                                 }}
                               >
-                                +{creditCards.length - 4} más
+                                +{creditCards.length - 4} tarjetas más
                               </Typography>
                             </Box>
                           )}
                         </Box>
+                        </>
                       ) : (
                         <Typography color="text.secondary" textAlign="center" py={4}>
                           No hay tarjetas de crédito configuradas
@@ -1432,50 +1560,20 @@ export default function DashboardPage() {
                 />
               </Box>
               
-              {chartData ? (
+              {chartData && chartData.datasets && chartData.datasets[0]?.data?.length > 0 ? (
                 <Box 
                   sx={{ 
-                    height: 380, 
+                    height: 400,
+                    width: '100%',
                     background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
                     borderRadius: 3,
                     p: 3,
                     border: '1px solid rgba(16, 185, 129, 0.1)',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '1px',
-                      background: 'linear-gradient(90deg, transparent, #10B981, transparent)',
-                      opacity: 0.5,
-                    }
                   }}
                 >
                   <Line
-                    data={{
-                      ...chartData,
-                      datasets: chartData.datasets.map((dataset: any, index: number) => ({
-                        ...dataset,
-                        borderWidth: 3,
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
-                        pointBackgroundColor: dataset.borderColor,
-                        pointBorderColor: '#1E293B',
-                        pointBorderWidth: 2,
-                        pointHoverBackgroundColor: dataset.borderColor,
-                        pointHoverBorderColor: '#ffffff',
-                        pointHoverBorderWidth: 3,
-                        tension: 0.4,
-                        fill: index === 2, // Solo el balance tendrá fill
-                        backgroundColor: index === 2 
-                          ? 'rgba(59, 130, 246, 0.1)' 
-                          : dataset.backgroundColor,
-                      }))
-                    }}
+                    data={chartData}
                     options={{
                       responsive: true,
                       maintainAspectRatio: false,
@@ -1530,24 +1628,7 @@ export default function DashboardPage() {
                       scales: {
                         x: {
                           grid: {
-                            color: 'rgba(51, 65, 85, 0.5)',
-                            drawBorder: false,
-                          },
-                          ticks: {
-                            color: '#94A3B8',
-                            font: {
-                              size: 12,
-                              weight: 'bold',
-                            },
-                            padding: 10,
-                          },
-                          border: {
-                            display: false,
-                          },
-                        },
-                        y: {
-                          grid: {
-                            color: 'rgba(51, 65, 85, 0.3)',
+                            color: 'rgba(255, 255, 255, 0.1)',
                             drawBorder: false,
                           },
                           ticks: {
@@ -1555,20 +1636,26 @@ export default function DashboardPage() {
                             font: {
                               size: 11,
                             },
-                            padding: 15,
-                            callback: function(value) {
-                              const currency = showUSD ? 'USD' : 'ARS';
-                              const formatter = new Intl.NumberFormat(showUSD ? 'en-US' : 'es-AR', {
-                                style: 'currency',
-                                currency: currency,
-                                minimumFractionDigits: 0,
-                                notation: 'compact',
-                              });
-                              return formatter.format(value as number);
-                            }
                           },
-                          border: {
-                            display: false,
+                        },
+                        y: {
+                          grid: {
+                            color: 'rgba(255, 255, 255, 0.1)',
+                            drawBorder: false,
+                          },
+                          ticks: {
+                            color: '#94A3B8',
+                            font: {
+                              size: 11,
+                            },
+                            callback: function(value: any) {
+                              return new Intl.NumberFormat('es-AR', {
+                                style: 'currency',
+                                currency: showUSD ? 'USD' : 'ARS',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              }).format(value);
+                            },
                           },
                         },
                       },
@@ -1578,16 +1665,8 @@ export default function DashboardPage() {
                       },
                       elements: {
                         point: {
-                          hoverRadius: 8,
+                          hoverBorderWidth: 3,
                         },
-                        line: {
-                          borderJoinStyle: 'round',
-                          borderCapStyle: 'round',
-                        },
-                      },
-                      animation: {
-                        duration: 2000,
-                        easing: 'easeInOutQuart',
                       },
                     }}
                   />
@@ -1886,6 +1965,20 @@ export default function DashboardPage() {
           {/* Proyecciones Financieras */}
           <Grid item xs={12}>
             <ProjectionsChart defaultMonths={3} />
+            
+            {/* Explicación del Modelo de Proyecciones */}
+            <Box sx={{ mt: 2, px: 3, py: 2, bgcolor: 'rgba(30, 41, 59, 0.5)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem', lineHeight: 1.6, display: 'block' }}>
+                <strong style={{ color: '#10B981' }}>📊 Cómo funciona el modelo de proyecciones:</strong><br />
+                El sistema analiza tus transacciones históricas de los últimos 6 meses para generar proyecciones financieras precisas. 
+                Para los <strong>ingresos</strong>, calcula el promedio mensual de tus entradas de dinero, identificando patrones recurrentes y estacionalidad. 
+                Para los <strong>egresos</strong>, además del promedio histórico, incorpora tus gastos recurrentes configurados (suscripciones, servicios, etc.) 
+                y los vencimientos de tarjetas de crédito próximos. El <strong>balance proyectado</strong> se obtiene restando los egresos estimados de los ingresos proyectados. 
+                Las proyecciones incluyen un margen de confianza del 85%, representado por las áreas sombreadas en el gráfico, que indica el rango probable 
+                de variación basado en la volatilidad histórica de tus finanzas. Este modelo se actualiza automáticamente cada vez que registras nuevas transacciones, 
+                mejorando su precisión con el tiempo. Puedes ajustar el período de proyección (1-12 meses) para planificar a corto o largo plazo.
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
 

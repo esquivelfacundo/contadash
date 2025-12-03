@@ -92,7 +92,7 @@ export default function RecurringTransactionFormDialog({
           currency: 'ARS',
           amountArs: Number(recurring.amountArs),
           amountUsd: Number(recurring.amountUsd || 0),
-          exchangeRate: Number(recurring.exchangeRate || 1000),
+          exchangeRate: Number(recurring.exchangeRate || 0),
           frequency: recurring.frequency === 'DAILY' || recurring.frequency === 'WEEKLY' ? 'MONTHLY' : recurring.frequency,
           dayOfMonth: recurring.dayOfMonth || new Date().getDate(),
           generateHistorical: false,
@@ -108,7 +108,7 @@ export default function RecurringTransactionFormDialog({
           currency: 'ARS',
           amountArs: 0,
           amountUsd: 0,
-          exchangeRate: 1000,
+          exchangeRate: 0,
           frequency: 'MONTHLY',
           dayOfMonth: new Date().getDate(),
           generateHistorical: false,
@@ -137,7 +137,6 @@ export default function RecurringTransactionFormDialog({
       const data = await categoriesApi.getAll()
       setCategories(data)
     } catch (err) {
-      console.error('Error loading categories:', err)
     }
   }
 
@@ -146,7 +145,6 @@ export default function RecurringTransactionFormDialog({
       const data = await clientsApi.getAll()
       setClients(data)
     } catch (err) {
-      console.error('Error loading clients:', err)
     }
   }
 
@@ -155,7 +153,6 @@ export default function RecurringTransactionFormDialog({
       const data = await creditCardsApi.getAll()
       setCreditCards(data.filter((c: any) => c.isActive))
     } catch (err) {
-      console.error('Error loading credit cards:', err)
     }
   }
 
@@ -225,9 +222,6 @@ export default function RecurringTransactionFormDialog({
       onSuccess()
       handleClose()
     } catch (err: any) {
-      console.error('Error saving recurring transaction:', err)
-      console.error('Error response:', err.response?.data)
-      console.error('Error message:', err.message)
     } finally {
       setLoading(false)
     }
@@ -262,7 +256,6 @@ export default function RecurringTransactionFormDialog({
       try {
         await recurringTransactionsApi.generateTransaction(recurringId, date)
       } catch (err) {
-        console.error('Error generating transaction for date:', date, err)
       }
     }
   }

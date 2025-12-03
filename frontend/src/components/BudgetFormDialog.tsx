@@ -77,7 +77,7 @@ export default function BudgetFormDialog({
           currency: 'ARS',
           amountArs: Number(budget.amountArs),
           amountUsd: Number(budget.amountUsd),
-          exchangeRate: 1000,
+          exchangeRate: 0,
         }
       : {
           categoryId: '',
@@ -86,7 +86,7 @@ export default function BudgetFormDialog({
           currency: 'ARS',
           amountArs: 0,
           amountUsd: 0,
-          exchangeRate: 1000,
+          exchangeRate: 0,
         },
   })
 
@@ -108,7 +108,7 @@ export default function BudgetFormDialog({
           currency: 'ARS',
           amountArs: Number(budget.amountArs),
           amountUsd: Number(budget.amountUsd),
-          exchangeRate: 1000,
+          exchangeRate: 0,
         })
       }
     }
@@ -129,7 +129,6 @@ export default function BudgetFormDialog({
       // Filter only EXPENSE categories for budgets
       setCategories(data.filter((c: any) => c.type === 'EXPENSE'))
     } catch (err) {
-      console.error('Error loading categories:', err)
     }
   }
 
@@ -138,7 +137,6 @@ export default function BudgetFormDialog({
       const rate = await exchangeApi.getDolarBlue()
       setValue('exchangeRate', rate)
     } catch (err) {
-      console.error('Error loading exchange rate:', err)
     }
   }
 
@@ -163,7 +161,6 @@ export default function BudgetFormDialog({
       onSuccess()
       handleClose()
     } catch (err: any) {
-      console.error('Error saving budget:', err)
       alert(err.response?.data?.error || 'Error al guardar presupuesto')
     } finally {
       setLoading(false)

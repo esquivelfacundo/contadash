@@ -107,9 +107,6 @@ export default function AttachmentUploader({
       const fileUrl = `${API_URL}/files/${filename}`
       onChange(fileUrl)
     } catch (err: any) {
-      console.error('Error uploading file:', err)
-      console.error('Error details:', err.response?.data)
-      console.error('Request config:', err.config)
       setError(err.response?.data?.error || 'Error al subir el archivo')
     } finally {
       setUploading(false)

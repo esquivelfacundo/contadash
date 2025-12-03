@@ -257,10 +257,17 @@ npm run lint         # Linter
 
 ## 📚 Documentación
 
+### Deployment
+- [🚀 Guía Rápida de Deployment](DEPLOY_QUICK_START.md) - Deploy en 15 minutos
+- [📊 Deployment Completo](docs/DEPLOYMENT_GRATUITO.md) - Guía detallada y opciones
+- [📋 Resumen de Deployment](DEPLOYMENT_SUMMARY.md) - Análisis y recomendaciones
+- [🛠️ Comandos Útiles](DEPLOYMENT_COMMANDS.md) - Referencia de comandos
+
+### Desarrollo
 - [Estado del Proyecto](docs/ESTADO_PROYECTO.md) - Comparación con guía original
 - [Guía de Desarrollo](guia/README.md) - Documentación técnica completa
 - [API Documentation](guia/API_DOCUMENTATION.md) - Endpoints y ejemplos
-- [Arquitectura](guia/ARCHITECTURE.md) - Diseño del sistema
+- [Arquitectura](docs/ARQUITECTURA.md) - Diseño del sistema
 - [Seguridad](guia/SECURITY.md) - Prácticas de seguridad
 
 ---

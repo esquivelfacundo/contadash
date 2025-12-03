@@ -26,6 +26,14 @@ a {
   --background-end-rgb: 255, 255, 255;
 }
 
+/* Importar Satisfy como fallback */
+@import url('https://fonts.googleapis.com/css2?family=Satisfy&display=swap');
+
+/* Asegurar que la fuente Satisfy esté disponible */
+.satisfy-font {
+  font-family: 'Satisfy', cursive !important;
+}
+
 /* Scrollbar personalizada global */
 * {
   scrollbar-width: thin;

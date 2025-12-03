@@ -52,7 +52,6 @@ export default function PeriodComparison({
       const result = await analyticsApi.comparePeriods(period1, period2)
       setData(result)
     } catch (error) {
-      console.error('Error loading comparison:', error)
     } finally {
       setLoading(false)
     }

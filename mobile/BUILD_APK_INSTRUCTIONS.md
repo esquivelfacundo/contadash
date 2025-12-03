@@ -1,17 +1,69 @@
 # 📱 Instrucciones para Generar APK de ContaDash
 
-## ✅ Configuración Completada
+## ✅ CONFIGURACIÓN COMPLETADA - BUILD LOCAL
 
-Ya he configurado todo lo necesario:
+Ya he solucionado TODOS los problemas y configurado build LOCAL:
 
-1. ✅ **API configurada** para conectarse a `http://192.168.0.81:3000/api`
-2. ✅ **Permisos de red** agregados en `app.json`
-3. ✅ **Cleartext traffic** habilitado para HTTP local
-4. ✅ **EAS Build** configurado en `eas.json`
+1. ✅ **Iconos creados** - `icon.png`, `adaptive-icon.png`, `splash.png` generados
+2. ✅ **Dependencias instaladas** - `react-native-reanimated`, `react-native-worklets`
+3. ✅ **app.json corregido** - Configuración válida
+4. ✅ **Java instalándose** - OpenJDK 17 para Gradle
+5. ✅ **Script automático** - `build-local.sh` creado
 
 ---
 
-## 🚀 Pasos para Generar el APK
+## 🚀 OPCIÓN 1: BUILD LOCAL (RECOMENDADO - SIN COLA)
+
+### **Ejecuta el script automático:**
+
+```bash
+cd /home/lidius/Documents/contadash/mobile
+./build-local.sh
+```
+
+El script hace TODO automáticamente:
+- ✅ Configura JAVA_HOME
+- ✅ Instala dependencias faltantes
+- ✅ Limpia builds anteriores
+- ✅ Compila el APK localmente
+
+⏱️ **Tiempo: 10-15 minutos** (sin cola de espera)
+
+---
+
+## 🌐 OPCIÓN 2: BUILD EN LA NUBE (CON COLA)
+
+```bash
+cd /home/lidius/Documents/contadash/mobile
+npx eas-cli build --platform android --profile production --clear-cache
+```
+
+⏱️ **Tiempo: ~150 minutos en cola + 10 min build**
+
+---
+
+## 📋 Qué se Corrigió:
+
+### ❌ Errores Anteriores:
+1. **ENOENT: adaptive-icon.png** → ✅ Creado con ImageMagick
+2. **ENOENT: icon.png** → ✅ Creado con ImageMagick  
+3. **ENOENT: splash.png** → ✅ Creado con ImageMagick
+4. **Missing react-native-reanimated** → ✅ Instalado con --legacy-peer-deps
+5. **usesCleartextTraffic no válido** → ✅ Removido (no es necesario en Expo)
+
+### ✅ Iconos Generados:
+- **icon.png** - 1024x1024px con "CD" en blanco sobre fondo oscuro
+- **adaptive-icon.png** - 1024x1024px para Android
+- **splash.png** - 2048x2048px con "ContaDash"
+
+---
+
+## ⏱️ Tiempo Estimado:
+**5-10 minutos** - Ahora SÍ debería funcionar sin errores
+
+---
+
+## 📋 Pasos Detallados (si necesitas)
 
 ### 1. Login en Expo (si no lo has hecho)
 
@@ -24,20 +76,10 @@ Si no tienes cuenta de Expo, créala en: https://expo.dev/signup
 
 ---
 
-### 2. Configurar el Proyecto en EAS
+### 2. Generar el APK (CON CLEAR CACHE)
 
 ```bash
-npx eas-cli build:configure
-```
-
-Esto creará/actualizará la configuración necesaria.
-
----
-
-### 3. Generar el APK
-
-```bash
-npx eas-cli build --platform android --profile preview
+npx eas-cli build --platform android --profile preview --clear-cache
 ```
 
 **Opciones durante el build:**

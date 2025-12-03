@@ -1,18 +1,20 @@
 # Dependencies
 node_modules/
-.pnp
+/.pnp
 .pnp.js
 
 # Testing
-coverage/
-*.lcov
-.nyc_output
+/coverage
+
+# Next.js
+/.next/
+/out/
+.next
+out
 
 # Production
-build/
-dist/
-.next/
-out/
+/build
+dist
 
 # Environment variables
 .env
@@ -20,15 +22,20 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 
 # Logs
-logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 .pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
 
 # OS
 .DS_Store
@@ -40,20 +47,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-*~
-
-# Prisma
-*.db
-*.db-journal
-
-# Expo
-.expo/
-.expo-shared/
 
 # Misc
 .turbo
-.vercel
 .cache
-
-# Deployment info (contiene información sensible)
-DEPLOYMENT_INFO.md
