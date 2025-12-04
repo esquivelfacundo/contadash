@@ -12,31 +12,39 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter()
   const { isAuthenticated, setAuth } = useAuthStore()
-  const [isLoading, setIsLoading] = useState(true)
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    // Verificar si hay token en localStorage
-    const storedToken = localStorage.getItem('token')
-    const storedUser = localStorage.getItem('user')
-    
-    if (storedToken && storedUser) {
-      try {
-        const user = JSON.parse(storedUser)
-        setAuth(user, storedToken)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Error parsing stored user:', error)
+    const checkAuth = () => {
+      // Verificar si hay token en localStorage
+      const storedToken = localStorage.getItem('token')
+      const storedUser = localStorage.getItem('user')
+      
+      if (storedToken && storedUser) {
+        try {
+          const user = JSON.parse(storedUser)
+          // Solo actualizar el store si no está autenticado
+          if (!isAuthenticated) {
+            setAuth(user, storedToken)
+          }
+          setIsChecking(false)
+        } catch (error) {
+          console.error('Error parsing stored user:', error)
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          router.push('/login')
+        }
+      } else {
+        // No hay sesión guardada, redirigir al login
         router.push('/login')
       }
-    } else if (!isAuthenticated) {
-      router.push('/login')
-    } else {
-      setIsLoading(false)
     }
-  }, [isAuthenticated, setAuth, router])
+
+    checkAuth()
+  }, []) // Solo ejecutar una vez al montar
 
   // Mostrar loading mientras verifica
-  if (isLoading) {
+  if (isChecking) {
     return (
       <Box
         sx={{
