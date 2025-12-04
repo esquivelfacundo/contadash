@@ -16,6 +16,8 @@ model User {
   plan                  UserPlan               @default(FREE)
   emailVerified         DateTime?              @map("email_verified")
   emailVerificationToken String?               @map("email_verification_token")
+  emailVerificationCode String?                @map("email_verification_code")
+  emailVerificationExpires DateTime?           @map("email_verification_expires")
   passwordResetToken    String?                @unique @map("password_reset_token")
   passwordResetExpires  DateTime?              @map("password_reset_expires")
   image                 String?

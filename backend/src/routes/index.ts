@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import authRoutes from './auth.routes'
+import emailVerificationRoutes from './email-verification.routes'
 import transactionsRoutes from './transactions.routes'
 import categoriesRoutes from './categories.routes'
 import clientsRoutes from './clients.routes'
@@ -17,6 +18,7 @@ const router = Router()
 
 // Mount routes
 router.use('/auth', authRoutes)
+router.use('/email-verification', emailVerificationRoutes)
 router.use('/transactions', transactionsRoutes)
 router.use('/categories', categoriesRoutes)
 router.use('/clients', clientsRoutes)

@@ -47,8 +47,15 @@ export default function RegisterPage() {
       setLoading(true)
       setError('')
       const response = await authApi.register(data)
-      setAuth(response.user, response.token)
-      router.push('/dashboard')
+      
+      // Si requiere verificación, redirigir a la página de verificación
+      if (response.requiresVerification) {
+        router.push(`/verify-code?userId=${response.user.id}&email=${response.user.email}`)
+      } else {
+        // Si no requiere verificación (backward compatibility)
+        setAuth(response.user, response.token)
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al registrarse')
     } finally {

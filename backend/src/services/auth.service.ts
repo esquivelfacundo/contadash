@@ -5,6 +5,7 @@ import { RegisterInput, LoginInput } from '../validations/auth.validation'
 import { generateToken, generateRefreshToken, JwtPayload } from '../utils/jwt'
 import { ConflictError, UnauthorizedError, NotFoundError } from '../utils/errors'
 import { emailService } from './email.service'
+import { sendVerificationEmail as sendEmailVerificationCode } from './email-verification.service'
 
 /**
  * Create default categories for a new user
@@ -101,19 +102,19 @@ export async function register(data: RegisterInput) {
   // Create default categories for new user
   await createDefaultCategories(user.id)
 
-  // Generate tokens
-  const payload: JwtPayload = {
-    userId: user.id,
-    email: user.email,
-  }
+  // Enviar código de verificación por email
+  await sendEmailVerificationCode(user.id, user.email, user.name)
 
-  const token = generateToken(payload)
-  const refreshToken = generateRefreshToken(payload)
-
+  // NO generar tokens todavía - el usuario debe verificar su email primero
   return {
-    user,
-    token,
-    refreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      emailVerified: false,
+    },
+    message: 'Registro exitoso. Por favor verifica tu email para continuar.',
+    requiresVerification: true,
   }
 }
 
