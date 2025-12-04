@@ -6,7 +6,8 @@ interface User {
   email: string
   name: string
   company?: string
-  plan: string
+  plan?: string
+  emailVerified?: boolean
 }
 
 interface AuthState {

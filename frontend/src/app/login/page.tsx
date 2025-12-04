@@ -45,8 +45,13 @@ export default function LoginPage() {
       setLoading(true)
       setError('')
       const response = await authApi.login(data)
-      setAuth(response.user, response.token)
-      router.push('/dashboard')
+      
+      if (response.token) {
+        setAuth(response.user, response.token)
+        router.push('/dashboard')
+      } else {
+        setError('Error al iniciar sesión')
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al iniciar sesión')
     } finally {

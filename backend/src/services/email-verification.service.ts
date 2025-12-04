@@ -1,5 +1,5 @@
 import { prisma } from '../config/database'
-import { sendEmail } from '../utils/email'
+import { emailService } from './email.service'
 import * as fs from 'fs'
 import * as path from 'path'
 import crypto from 'crypto'
@@ -42,7 +42,7 @@ export async function sendVerificationEmail(userId: string, email: string, name:
       .replace(/{{verificationCode}}/g, verificationCode)
     
     // Enviar email
-    await sendEmail({
+    await emailService.sendEmail({
       to: email,
       subject: 'Verifica tu email - ContaDash',
       html: htmlTemplate,
