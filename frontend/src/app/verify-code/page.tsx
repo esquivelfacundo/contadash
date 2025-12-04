@@ -12,17 +12,21 @@ import {
   Button,
   Alert,
   TextField,
+  Snackbar,
 } from '@mui/material'
+import { useAuthStore } from '@/lib/store/auth.store'
 
 export default function VerifyCodePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const setAuth = useAuthStore((state) => state.setAuth)
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [userId, setUserId] = useState('')
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resending, setResending] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     const userIdParam = searchParams.get('userId')
@@ -87,12 +91,16 @@ export default function VerifyCodePage() {
         code: verificationCode,
       })
 
-      // Guardar token y usuario
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      // Guardar token y usuario en el store
+      setAuth(response.data.user, response.data.token)
 
-      // Redirigir al dashboard
-      router.push('/dashboard')
+      // Mostrar mensaje de éxito
+      setSuccessMessage('✅ Email verificado exitosamente')
+      
+      // Esperar 2 segundos y redirigir al login
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
     } catch (err: any) {
       setError(err.response?.data?.error || 'Código inválido o expirado')
     } finally {
@@ -243,6 +251,18 @@ export default function VerifyCodePage() {
           </CardContent>
         </Card>
       </Container>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={6000}
+        onClose={() => setSuccessMessage('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" sx={{ width: '100%' }}>
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

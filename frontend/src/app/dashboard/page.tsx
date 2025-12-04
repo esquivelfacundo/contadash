@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import {
   Box,
   Typography,
@@ -81,7 +82,7 @@ const MONTHS = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ]
 
-export default function DashboardPage() {
+function DashboardPage() {
   const { user } = useAuthStore()
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth() + 1
@@ -1982,5 +1983,14 @@ export default function DashboardPage() {
 
       </Box>
     </DashboardLayout>
+  )
+}
+
+// Envolver con ProtectedRoute
+export default function ProtectedDashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardPage />
+    </ProtectedRoute>
   )
 }
