@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { apiClient } from '@/lib/api/client'
+import {
+  Box,
+  Card,
+  CardContent,
+  Container,
+  Typography,
+  Button,
+  Alert,
+  TextField,
+} from '@mui/material'
 
 export default function VerifyCodePage() {
   const router = useRouter()
@@ -105,82 +115,134 @@ export default function VerifyCodePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">ContaDash</h1>
-          <p className="text-gray-400 text-sm">Sistema de Gestión Financiera</p>
-        </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}
+    >
+      <Container maxWidth="sm">
+        <Card elevation={8}>
+          <CardContent sx={{ p: 4 }}>
+            {/* Header */}
+            <Box textAlign="center" mb={4}>
+              <Typography 
+                variant="h4" 
+                gutterBottom
+                sx={{ 
+                  fontFamily: 'var(--font-satisfy)',
+                  fontSize: '3rem',
+                  fontWeight: 400,
+                }}
+              >
+                ContaDash
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sistema de Gestión Financiera
+              </Typography>
+            </Box>
 
-        {/* Title */}
-        <h2 className="text-2xl font-semibold text-white mb-2 text-center">
-          Verifica tu Email 📧
-        </h2>
-        <p className="text-gray-400 text-center mb-8">
-          Hemos enviado un código de 6 dígitos a<br />
-          <span className="text-indigo-400 font-medium">{email}</span>
-        </p>
+            {/* Title */}
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 600 }}>
+              Verifica tu Email 📧
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 4 }}>
+              Hemos enviado un código de 6 dígitos a<br />
+              <Box component="span" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                {email}
+              </Box>
+            </Typography>
 
-        {/* Code Input */}
-        <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
-          {code.map((digit, index) => (
-            <input
-              key={index}
-              id={`code-${index}`}
-              type="text"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleCodeChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              className="w-12 h-14 text-center text-2xl font-bold bg-gray-800 border-2 border-gray-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none transition-colors"
-              disabled={loading}
-            />
-          ))}
-        </div>
+            {/* Error Message */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 mb-6">
-            <p className="text-red-400 text-sm text-center">{error}</p>
-          </div>
-        )}
+            {/* Code Input */}
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                gap: 1, 
+                justifyContent: 'center', 
+                mb: 3 
+              }} 
+              onPaste={handlePaste}
+            >
+              {code.map((digit, index) => (
+                <TextField
+                  key={index}
+                  id={`code-${index}`}
+                  value={digit}
+                  onChange={(e) => handleCodeChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  disabled={loading}
+                  inputProps={{
+                    maxLength: 1,
+                    style: { 
+                      textAlign: 'center', 
+                      fontSize: '1.5rem',
+                      fontWeight: 'bold',
+                      padding: '12px 0',
+                    }
+                  }}
+                  sx={{
+                    width: '50px',
+                    '& .MuiOutlinedInput-root': {
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'primary.main',
+                        borderWidth: 2,
+                      },
+                    },
+                  }}
+                />
+              ))}
+            </Box>
 
-        {/* Verify Button */}
-        <button
-          onClick={handleVerify}
-          disabled={loading || code.join('').length !== 6}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-        >
-          {loading ? 'Verificando...' : 'Verificar Email'}
-        </button>
+            {/* Verify Button */}
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              onClick={handleVerify}
+              disabled={loading || code.join('').length !== 6}
+              sx={{ mb: 2 }}
+            >
+              {loading ? 'Verificando...' : 'Verificar Email'}
+            </Button>
 
-        {/* Resend Code */}
-        <div className="text-center">
-          <p className="text-gray-400 text-sm mb-2">
-            ¿No recibiste el código?
-          </p>
-          <button
-            onClick={handleResend}
-            disabled={resending}
-            className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {resending ? 'Reenviando...' : 'Reenviar código'}
-          </button>
-        </div>
+            {/* Resend Code */}
+            <Box textAlign="center" sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                ¿No recibiste el código?
+              </Typography>
+              <Button
+                variant="text"
+                size="small"
+                onClick={handleResend}
+                disabled={resending}
+              >
+                {resending ? 'Reenviando...' : 'Reenviar código'}
+              </Button>
+            </Box>
 
-        {/* Security Notice */}
-        <div className="mt-8 bg-yellow-500/10 border-l-4 border-yellow-500 rounded p-4">
-          <p className="text-yellow-400 text-xs font-semibold mb-1">
-            ⚠️ Información de Seguridad
-          </p>
-          <ul className="text-gray-400 text-xs space-y-1">
-            <li>• El código expira en 15 minutos</li>
-            <li>• Nunca compartas este código con nadie</li>
-            <li>• Si no solicitaste este registro, ignora este mensaje</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+            {/* Security Notice */}
+            <Alert severity="warning" sx={{ mt: 3 }}>
+              <Typography variant="caption" component="div" sx={{ fontWeight: 600, mb: 0.5 }}>
+                ⚠️ Información de Seguridad
+              </Typography>
+              <Typography variant="caption" component="div">
+                • El código expira en 15 minutos<br />
+                • Nunca compartas este código con nadie<br />
+                • Si no solicitaste este registro, ignora este mensaje
+              </Typography>
+            </Alert>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   )
 }
