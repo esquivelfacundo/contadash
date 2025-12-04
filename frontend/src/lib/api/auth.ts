@@ -18,10 +18,13 @@ export interface AuthResponse {
     email: string
     name: string
     company?: string
-    plan: string
+    plan?: string
+    emailVerified?: boolean
   }
-  token: string
-  refreshToken: string
+  token?: string
+  refreshToken?: string
+  message?: string
+  requiresVerification?: boolean
 }
 
 export const authApi = {
