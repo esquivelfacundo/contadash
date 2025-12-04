@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import type { Transporter } from 'nodemailer'
+import sgMail from '@sendgrid/mail'
 
 interface EmailOptions {
   to: string
@@ -9,35 +10,41 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private transporter: Transporter
+  private transporter: Transporter | null = null
+  private useSendGridAPI: boolean = false
 
   constructor() {
-    // Configurar transporter según el entorno
+    // Configurar según el entorno
     if (process.env.NODE_ENV === 'production') {
-      console.log('📧 Configurando SMTP para producción:', {
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        secure: process.env.SMTP_SECURE,
-        user: process.env.SMTP_USER,
-      })
-      
-      // Producción: usar servicio real (Gmail, SendGrid, etc.)
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
+      // En producción, usar SendGrid API si está disponible
+      if (process.env.SENDGRID_API_KEY) {
+        console.log('📧 Configurando SendGrid API para producción')
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+        this.useSendGridAPI = true
+      } else if (process.env.SMTP_PASS) {
+        // Fallback a SMTP si no hay API key
+        console.log('📧 Configurando SMTP para producción:', {
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          secure: process.env.SMTP_SECURE,
           user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        connectionTimeout: 10000, // 10 segundos
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
-      })
+        })
+        
+        this.transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 10000,
+        })
+      }
     } else {
       // Desarrollo: usar ethereal (emails de prueba)
-      // En desarrollo, los emails se "envían" pero no llegan realmente
-      // Se pueden ver en https://ethereal.email/
       this.transporter = nodemailer.createTransport({
         host: 'smtp.ethereal.email',
         port: 587,
@@ -53,18 +60,35 @@ class EmailService {
     try {
       console.log('📧 Intentando enviar email a:', options.to)
       
-      const info = await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"ContaDash" <noreply@contadash.com>',
-        to: options.to,
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-      })
+      if (this.useSendGridAPI) {
+        // Usar SendGrid API
+        const msg = {
+          to: options.to,
+          from: process.env.EMAIL_FROM || 'ContaDash <noreply@contadash.com>',
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        }
+        
+        await sgMail.send(msg)
+        console.log('✅ Email enviado exitosamente via SendGrid API a:', options.to)
+      } else if (this.transporter) {
+        // Usar SMTP
+        const info = await this.transporter.sendMail({
+          from: process.env.EMAIL_FROM || '"ContaDash" <noreply@contadash.com>',
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        })
 
-      console.log('✅ Email enviado exitosamente a:', options.to)
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📧 Email enviado (desarrollo):', nodemailer.getTestMessageUrl(info))
+        console.log('✅ Email enviado exitosamente via SMTP a:', options.to)
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📧 Email enviado (desarrollo):', nodemailer.getTestMessageUrl(info))
+        }
+      } else {
+        throw new Error('No email service configured')
       }
     } catch (error) {
       console.error('❌ Error enviando email:', error)
