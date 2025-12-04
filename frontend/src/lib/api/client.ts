@@ -2,9 +2,14 @@ import axios from 'axios'
 
 // Detectar si estamos en localhost o en red local
 const getApiUrl = () => {
+  // Si hay NEXT_PUBLIC_API_URL configurada, usarla (producción)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL
+  }
+  
   // En el servidor (SSR), usar localhost
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+    return 'http://localhost:3000/api'
   }
   
   // En el cliente, usar la IP del host actual
