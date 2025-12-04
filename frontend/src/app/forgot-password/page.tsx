@@ -9,7 +9,8 @@ import {
   Container,
   TextField,
   Typography,
-  Paper,
+  Card,
+  CardContent,
   Alert,
   CircularProgress,
 } from '@mui/material'
@@ -37,103 +38,87 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  if (success) {
-    return (
-      <Container maxWidth="sm">
-        <Box
-          sx={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-            <Typography variant="h4" component="h1" gutterBottom align="center">
-              ✉️ Email Enviado
-            </Typography>
-
-            <Alert severity="success" sx={{ mb: 3 }}>
-              Si el email existe en nuestro sistema, recibirás un enlace para restablecer tu
-              contraseña.
-            </Alert>
-
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-              Revisa tu bandeja de entrada y sigue las instrucciones del email.
-            </Typography>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={() => router.push('/login')}
-            >
-              Volver al Login
-            </Button>
-          </Paper>
-        </Box>
-      </Container>
-    )
-  }
-
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
-            🔐 Recuperar Contraseña
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña.
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              margin="normal"
-              autoFocus
-              disabled={loading}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={loading}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Enviar Enlace'}
-            </Button>
-
-            <Box sx={{ textAlign: 'center' }}>
-              <Link href="/login" style={{ textDecoration: 'none' }}>
-                <Typography variant="body2" color="primary">
-                  Volver al Login
-                </Typography>
-              </Link>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}
+    >
+      <Container maxWidth="sm">
+        <Card elevation={8}>
+          <CardContent sx={{ p: 4 }}>
+            {/* Header */}
+            <Box textAlign="center" mb={4}>
+              <Typography 
+                variant="h4" 
+                gutterBottom
+                sx={{ 
+                  fontFamily: 'var(--font-satisfy)',
+                  fontSize: '3rem',
+                  fontWeight: 400,
+                }}
+              >
+                ContaDash
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sistema de Gestión Financiera
+              </Typography>
             </Box>
-          </form>
-        </Paper>
-      </Box>
-    </Container>
+
+            {/* Title */}
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 600 }}>
+              Recuperar Contraseña 🔐
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 4 }}>
+              Ingresa tu email y te enviaremos un código de verificación
+            </Typography>
+
+            {/* Error Message */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSubmit}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                margin="normal"
+                autoFocus
+                disabled={loading}
+              />
+
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                size="large"
+                disabled={loading}
+                sx={{ mt: 3, mb: 2 }}
+              >
+                {loading ? <CircularProgress size={24} /> : 'Enviar Código'}
+              </Button>
+
+              <Box textAlign="center">
+                <Link href="/login" style={{ textDecoration: 'none' }}>
+                  <Typography variant="body2" color="primary">
+                    Volver al Login
+                  </Typography>
+                </Link>
+              </Box>
+            </form>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   )
 }

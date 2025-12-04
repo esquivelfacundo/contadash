@@ -5,7 +5,7 @@ import {
   resetPassword,
   resendCode,
 } from '../controllers/password-reset.controller'
-import { authRateLimit } from '../middleware/rate-limit.middleware'
+import { authRateLimit } from '../middleware/security.middleware'
 
 const router = Router()
 
