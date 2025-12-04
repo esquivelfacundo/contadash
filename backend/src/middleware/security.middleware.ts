@@ -63,13 +63,12 @@ export const corsMiddleware = cors({
  */
 export const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'development' ? 10000 : 100, // 10000 en dev, 100 en prod
+  max: 10000, // Muy alto para evitar problemas en deployment
   message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde',
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting para health checks y en desarrollo
-    if (process.env.NODE_ENV === 'development') return true
+    // Skip rate limiting para health checks
     return req.path === '/health' || req.path === '/api/health'
   },
 })
