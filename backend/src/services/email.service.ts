@@ -14,6 +14,13 @@ class EmailService {
   constructor() {
     // Configurar transporter según el entorno
     if (process.env.NODE_ENV === 'production') {
+      console.log('📧 Configurando SMTP para producción:', {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: process.env.SMTP_SECURE,
+        user: process.env.SMTP_USER,
+      })
+      
       // Producción: usar servicio real (Gmail, SendGrid, etc.)
       this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -23,6 +30,9 @@ class EmailService {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
+        connectionTimeout: 10000, // 10 segundos
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
       })
     } else {
       // Desarrollo: usar ethereal (emails de prueba)
@@ -41,6 +51,8 @@ class EmailService {
 
   async sendEmail(options: EmailOptions): Promise<void> {
     try {
+      console.log('📧 Intentando enviar email a:', options.to)
+      
       const info = await this.transporter.sendMail({
         from: process.env.EMAIL_FROM || '"ContaDash" <noreply@contadash.com>',
         to: options.to,
@@ -49,11 +61,13 @@ class EmailService {
         html: options.html,
       })
 
+      console.log('✅ Email enviado exitosamente a:', options.to)
+      
       if (process.env.NODE_ENV === 'development') {
         console.log('📧 Email enviado (desarrollo):', nodemailer.getTestMessageUrl(info))
       }
     } catch (error) {
-      console.error('Error enviando email:', error)
+      console.error('❌ Error enviando email:', error)
       throw new Error('Error al enviar email')
     }
   }
