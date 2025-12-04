@@ -32,26 +32,34 @@ export async function sendVerificationEmail(userId: string, email: string, name:
       },
     })
     
-    // Leer template de email
-    const templatePath = path.join(__dirname, '../templates/email-verification.html')
-    let htmlTemplate = fs.readFileSync(templatePath, 'utf-8')
+    console.log(`✅ Código de verificación generado: ${verificationCode} para ${email}`)
     
-    // Reemplazar variables en el template
-    htmlTemplate = htmlTemplate
-      .replace(/{{userName}}/g, name)
-      .replace(/{{verificationCode}}/g, verificationCode)
-    
-    // Enviar email
-    await emailService.sendEmail({
-      to: email,
-      subject: 'Verifica tu email - ContaDash',
-      html: htmlTemplate,
-    })
-    
-    console.log(`✅ Código de verificación enviado a ${email}`)
+    // Intentar enviar email (no crítico)
+    try {
+      // Leer template de email
+      const templatePath = path.join(__dirname, '../templates/email-verification.html')
+      let htmlTemplate = fs.readFileSync(templatePath, 'utf-8')
+      
+      // Reemplazar variables en el template
+      htmlTemplate = htmlTemplate
+        .replace(/{{userName}}/g, name)
+        .replace(/{{verificationCode}}/g, verificationCode)
+      
+      // Enviar email
+      await emailService.sendEmail({
+        to: email,
+        subject: 'Verifica tu email - ContaDash',
+        html: htmlTemplate,
+      })
+      
+      console.log(`✅ Email de verificación enviado a ${email}`)
+    } catch (emailError) {
+      console.error('⚠️ Error enviando email (continuando):', emailError)
+      // No lanzar error - el código ya está guardado en la BD
+    }
   } catch (error) {
-    console.error('❌ Error enviando código de verificación:', error)
-    throw new Error('No se pudo enviar el código de verificación')
+    console.error('❌ Error en verificación de email:', error)
+    throw error
   }
 }
 
