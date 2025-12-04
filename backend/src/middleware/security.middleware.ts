@@ -122,7 +122,11 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
   // Verificar origin/referer
   const origin = req.get('origin')
   const referer = req.get('referer')
+  
+  // Usar ALLOWED_ORIGINS en lugar de solo FRONTEND_URL
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS?.split(',') || []
   const allowedOrigins = [
+    ...allowedOriginsEnv.map(o => o.trim()),
     process.env.FRONTEND_URL || 'http://localhost:3001',
     process.env.BACKEND_URL || 'http://localhost:3000',
   ]
@@ -131,6 +135,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
   const isValidReferer = referer && allowedOrigins.some((allowed) => referer.startsWith(allowed))
 
   if (!isValidOrigin && !isValidReferer) {
+    console.log('❌ CSRF validation failed:', { origin, referer, allowedOrigins })
     return res.status(403).json({
       error: 'CSRF validation failed',
       message: 'Request origin not allowed',
