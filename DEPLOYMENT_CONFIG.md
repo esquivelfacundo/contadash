@@ -19,6 +19,13 @@
 
 ---
 
+## ✅ **BACKEND DEPLOYADO EN RAILWAY**
+
+**URL:** https://contadash-production.up.railway.app
+**Status:** ✅ Activo
+**Database:** ✅ PostgreSQL conectado
+**Migrations:** ✅ 7 migraciones aplicadas
+
 ## 🔐 **Variables de Entorno - RAILWAY (Backend)**
 
 ```env
@@ -36,6 +43,7 @@ SMTP_PORT=465
 SMTP_SECURE=true
 SMTP_USER=notificaciones@contadash.com
 SMTP_PASS=Lidius@2001
+DATABASE_URL=(Generado automáticamente por Railway)
 ```
 
 **NOTA:** Railway configura automáticamente:

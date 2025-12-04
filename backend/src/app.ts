@@ -13,6 +13,9 @@ import {
 
 const app = express()
 
+// Trust proxy - IMPORTANTE para Railway/Vercel
+app.set('trust proxy', 1)
+
 // Health check (antes de cualquier middleware para Railway)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
