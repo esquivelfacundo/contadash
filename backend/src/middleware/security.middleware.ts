@@ -7,6 +7,8 @@ import rateLimit from 'express-rate-limit'
  * Security Headers Middleware
  * Configura headers de seguridad con Helmet
  */
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001'
+
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
@@ -15,9 +17,9 @@ export const securityHeaders = helmet({
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3001'],
+      connectSrc: ["'self'", frontendUrl],
       frameSrc: ["'self'"], // Permitir iframes del mismo origen
-      frameAncestors: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3001'], // Permitir ser embebido en el frontend
+      frameAncestors: ["'self'", frontendUrl], // Permitir ser embebido en el frontend
     },
   },
   crossOriginEmbedderPolicy: false,
