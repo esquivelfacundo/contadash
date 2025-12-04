@@ -19,7 +19,7 @@ export const securityHeaders = helmet({
  */
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
-    // Permitir requests sin origin (como Postman, apps móviles)
+    // Permitir requests sin origin (como Postman, apps móviles, health checks)
     if (!origin) return callback(null, true)
     
     // Permitir localhost en cualquier puerto
@@ -30,6 +30,19 @@ export const corsMiddleware = cors({
     // Permitir cualquier IP de red local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
     const localNetworkRegex = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/
     if (localNetworkRegex.test(origin)) {
+      return callback(null, true)
+    }
+    
+    // En producción, verificar contra ALLOWED_ORIGINS
+    if (process.env.NODE_ENV === 'production') {
+      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || []
+      if (allowedOrigins.some(allowed => origin.startsWith(allowed.trim()))) {
+        return callback(null, true)
+      }
+    }
+    
+    // En desarrollo, permitir todo
+    if (process.env.NODE_ENV === 'development') {
       return callback(null, true)
     }
     

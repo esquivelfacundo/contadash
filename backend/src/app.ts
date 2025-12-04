@@ -13,6 +13,15 @@ import {
 
 const app = express()
 
+// Health check (antes de cualquier middleware para Railway)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
 // 1. Security Headers (debe ser primero)
 app.use(securityHeaders)
 
@@ -37,11 +46,6 @@ app.use(securityAuditLogger)
 
 // 8. Multi-Tenancy Enforcement
 app.use(enforceTenancy)
-
-// Health check (sin rate limit)
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
 
 // API routes
 import apiRoutes from './routes'
