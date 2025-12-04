@@ -51,10 +51,12 @@ export default function RegisterPage() {
       // Si requiere verificación, redirigir a la página de verificación
       if (response.requiresVerification) {
         router.push(`/verify-code?userId=${response.user.id}&email=${response.user.email}`)
-      } else {
+      } else if (response.token) {
         // Si no requiere verificación (backward compatibility)
         setAuth(response.user, response.token)
         router.push('/dashboard')
+      } else {
+        setError('Error al registrarse')
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al registrarse')
