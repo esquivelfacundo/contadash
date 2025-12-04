@@ -48,12 +48,12 @@ export const authApi = {
   },
 
   requestPasswordReset: async (email: string) => {
-    const response = await apiClient.post('/auth/request-password-reset', { email })
+    const response = await apiClient.post('/password-reset/request', { email })
     return response.data
   },
 
   resetPassword: async (token: string, password: string) => {
-    const response = await apiClient.post('/auth/reset-password', { token, password })
+    const response = await apiClient.post('/password-reset/reset', { token, password })
     return response.data
   },
 
