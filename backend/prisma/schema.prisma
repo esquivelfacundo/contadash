@@ -20,6 +20,8 @@ model User {
   emailVerificationExpires DateTime?           @map("email_verification_expires")
   passwordResetToken    String?                @unique @map("password_reset_token")
   passwordResetExpires  DateTime?              @map("password_reset_expires")
+  passwordResetCode     String?                @map("password_reset_code")
+  passwordResetCodeExpires DateTime?           @map("password_reset_code_expires")
   image                 String?
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")

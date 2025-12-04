@@ -1,48 +1,109 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import { apiClient } from '@/lib/api/client'
 import {
   Box,
-  Button,
+  Card,
+  CardContent,
   Container,
-  TextField,
   Typography,
-  Paper,
+  Button,
   Alert,
-  CircularProgress,
+  TextField,
+  Snackbar,
   InputAdornment,
   IconButton,
 } from '@mui/material'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
-import { authApi } from '@/lib/api/auth'
 
-function ResetPasswordForm() {
+export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [step, setStep] = useState<'code' | 'password'>('code')
+  const [code, setCode] = useState(['', '', '', '', '', ''])
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [token, setToken] = useState('')
+  const [resending, setResending] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
-    const tokenParam = searchParams.get('token')
-    if (!tokenParam) {
-      setError('Token inválido o expirado')
-    } else {
-      setToken(tokenParam)
+    const emailParam = searchParams.get('email')
+    
+    if (!emailParam) {
+      router.push('/forgot-password')
+      return
     }
-  }, [searchParams])
+    
+    setEmail(emailParam)
+  }, [searchParams, router])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCodeChange = (index: number, value: string) => {
+    if (value.length > 1) return
+    
+    const newCode = [...code]
+    newCode[index] = value
+    setCode(newCode)
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`code-${index + 1}`)
+      nextInput?.focus()
+    }
+  }
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      const prevInput = document.getElementById(`code-${index - 1}`)
+      prevInput?.focus()
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
+    const pastedData = e.clipboardData.getData('text').slice(0, 6)
+    const newCode = pastedData.split('')
+    
+    while (newCode.length < 6) {
+      newCode.push('')
+    }
+    
+    setCode(newCode)
+  }
+
+  const handleVerifyCode = async () => {
+    const verificationCode = code.join('')
+    
+    if (verificationCode.length !== 6) {
+      setError('Por favor ingresa el código completo')
+      return
+    }
+
+    setLoading(true)
     setError('')
 
+    try {
+      await apiClient.post('/password-reset/verify', {
+        email,
+        code: verificationCode,
+      })
+
+      // Código verificado, pasar al siguiente paso
+      setStep('password')
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Código inválido o expirado')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden')
       return
@@ -53,165 +114,263 @@ function ResetPasswordForm() {
       return
     }
 
-    if (!token) {
-      setError('Token inválido')
-      return
-    }
-
     setLoading(true)
+    setError('')
 
     try {
-      await authApi.resetPassword(token, password)
-      setSuccess(true)
+      await apiClient.post('/password-reset/reset', {
+        email,
+        code: code.join(''),
+        newPassword: password,
+      })
+
+      // Mostrar mensaje de éxito
+      setSuccessMessage('✅ Contraseña actualizada exitosamente')
+      
+      // Esperar 2 segundos y redirigir al login
       setTimeout(() => {
         router.push('/login')
-      }, 3000)
+      }, 2000)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al restablecer la contraseña')
+      setError(err.response?.data?.error || 'Error al restablecer la contraseña')
     } finally {
       setLoading(false)
     }
   }
 
-  if (success) {
-    return (
-      <Container maxWidth="sm">
-        <Box
-          sx={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-            <Typography variant="h4" component="h1" gutterBottom align="center">
-              ✅ Contraseña Restablecida
-            </Typography>
+  const handleResend = async () => {
+    setResending(true)
+    setError('')
 
-            <Alert severity="success" sx={{ mb: 3 }}>
-              Tu contraseña ha sido restablecida exitosamente.
-            </Alert>
-
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-              Serás redirigido al login en unos segundos...
-            </Typography>
-
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={() => router.push('/login')}
-            >
-              Ir al Login
-            </Button>
-          </Paper>
-        </Box>
-      </Container>
-    )
+    try {
+      await apiClient.post('/password-reset/resend', { email })
+      setSuccessMessage('Código reenviado exitosamente')
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Error al reenviar el código')
+    } finally {
+      setResending(false)
+    }
   }
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
-            🔐 Nueva Contraseña
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Ingresa tu nueva contraseña.
-          </Typography>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="Nueva Contraseña"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              margin="normal"
-              autoFocus
-              disabled={loading || !token}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Confirmar Contraseña"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              margin="normal"
-              disabled={loading || !token}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      edge="end"
-                    >
-                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={loading || !token}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Restablecer Contraseña'}
-            </Button>
-
-            <Box sx={{ textAlign: 'center' }}>
-              <Link href="/login" style={{ textDecoration: 'none' }}>
-                <Typography variant="body2" color="primary">
-                  Volver al Login
-                </Typography>
-              </Link>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      }}
+    >
+      <Container maxWidth="sm">
+        <Card elevation={8}>
+          <CardContent sx={{ p: 4 }}>
+            {/* Header */}
+            <Box textAlign="center" mb={4}>
+              <Typography 
+                variant="h4" 
+                gutterBottom
+                sx={{ 
+                  fontFamily: 'var(--font-satisfy)',
+                  fontSize: '3rem',
+                  fontWeight: 400,
+                }}
+              >
+                ContaDash
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sistema de Gestión Financiera
+              </Typography>
             </Box>
-          </form>
-        </Paper>
-      </Box>
-    </Container>
-  )
-}
 
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<CircularProgress />}>
-      <ResetPasswordForm />
-    </Suspense>
+            {step === 'code' ? (
+              <>
+                {/* Title */}
+                <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 600 }}>
+                  Recupera tu contraseña 🔐
+                </Typography>
+                <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 4 }}>
+                  Hemos enviado un código de 6 dígitos a<br />
+                  <Box component="span" sx={{ color: 'primary.main', fontWeight: 500 }}>
+                    {email}
+                  </Box>
+                </Typography>
+
+                {/* Error Message */}
+                {error && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                  </Alert>
+                )}
+
+                {/* Code Input */}
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1, 
+                    justifyContent: 'center', 
+                    mb: 3 
+                  }} 
+                  onPaste={handlePaste}
+                >
+                  {code.map((digit, index) => (
+                    <TextField
+                      key={index}
+                      id={`code-${index}`}
+                      value={digit}
+                      onChange={(e) => handleCodeChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      disabled={loading}
+                      inputProps={{
+                        maxLength: 1,
+                        style: { 
+                          textAlign: 'center', 
+                          fontSize: '1.5rem',
+                          fontWeight: 'bold',
+                          padding: '12px 0',
+                        }
+                      }}
+                      sx={{
+                        width: '50px',
+                        '& .MuiOutlinedInput-root': {
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'primary.main',
+                            borderWidth: 2,
+                          },
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                {/* Verify Button */}
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  onClick={handleVerifyCode}
+                  disabled={loading || code.join('').length !== 6}
+                  sx={{ mb: 2 }}
+                >
+                  {loading ? 'Verificando...' : 'Verificar Código'}
+                </Button>
+
+                {/* Resend Code */}
+                <Box textAlign="center" sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    ¿No recibiste el código?
+                  </Typography>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleResend}
+                    disabled={resending}
+                  >
+                    {resending ? 'Reenviando...' : 'Reenviar código'}
+                  </Button>
+                </Box>
+
+                {/* Security Notice */}
+                <Alert severity="warning" sx={{ mt: 3 }}>
+                  <Typography variant="caption" component="div" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    ⚠️ Información de Seguridad
+                  </Typography>
+                  <Typography variant="caption" component="div">
+                    • El código expira en 15 minutos<br />
+                    • Nunca compartas este código con nadie<br />
+                    • Si no solicitaste este cambio, ignora este mensaje
+                  </Typography>
+                </Alert>
+              </>
+            ) : (
+              <>
+                {/* Title */}
+                <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 600 }}>
+                  Nueva Contraseña 🔑
+                </Typography>
+                <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 4 }}>
+                  Ingresa tu nueva contraseña
+                </Typography>
+
+                {/* Error Message */}
+                {error && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                  </Alert>
+                )}
+
+                {/* Password Fields */}
+                <TextField
+                  fullWidth
+                  label="Nueva Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  margin="normal"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Confirmar Contraseña"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  margin="normal"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                {/* Reset Button */}
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  onClick={handleResetPassword}
+                  disabled={loading || !password || !confirmPassword}
+                  sx={{ mt: 3 }}
+                >
+                  {loading ? 'Actualizando...' : 'Actualizar Contraseña'}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </Container>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={6000}
+        onClose={() => setSuccessMessage('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="success" sx={{ width: '100%' }}>
+          {successMessage}
+        </Alert>
+      </Snackbar>
+    </Box>
   )
 }

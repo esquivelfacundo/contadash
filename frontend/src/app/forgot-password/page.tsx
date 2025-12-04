@@ -29,10 +29,10 @@ export default function ForgotPasswordPage() {
 
     try {
       await authApi.requestPasswordReset(email)
-      setSuccess(true)
+      // Redirigir a la página de verificación de código
+      router.push(`/reset-password?email=${encodeURIComponent(email)}`)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al enviar el email')
-    } finally {
       setLoading(false)
     }
   }
