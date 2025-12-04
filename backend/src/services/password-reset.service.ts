@@ -55,47 +55,66 @@ export async function sendPasswordResetCode(email: string): Promise<void> {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recupera tu contraseña - ContaDash</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <table width="100%" cellpadding="0" cellspacing="0" style="min-height: 100vh; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
         <tr>
             <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1d2e; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+                    <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 40px 30px; text-align: center;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">ContaDash</h1>
-                            <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 400;">Sistema de Gestión Financiera</p>
+                        <td style="background-color: #667eea; padding: 40px 20px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">ContaDash</h1>
+                            <p style="margin: 8px 0 0; color: #ffffff; font-size: 14px; opacity: 0.9;">Sistema de Gestión Financiera</p>
                         </td>
                     </tr>
+                    
+                    <!-- Content -->
                     <tr>
-                        <td style="padding: 50px 40px;">
-                            <h2 style="margin: 0 0 20px; color: #ffffff; font-size: 24px; font-weight: 600;">Recupera tu contraseña 🔐</h2>
-                            <p style="margin: 0 0 30px; color: rgba(255,255,255,0.8); font-size: 16px; line-height: 1.6;">Hola <strong style="color: #ffffff;">${user.name}</strong>,</p>
-                            <p style="margin: 0 0 30px; color: rgba(255,255,255,0.8); font-size: 16px; line-height: 1.6;">Recibimos una solicitud para restablecer tu contraseña. Usa el siguiente código para continuar:</p>
+                        <td style="padding: 40px 20px;">
+                            <h2 style="margin: 0 0 20px; color: #333333; font-size: 22px; font-weight: 600; text-align: center;">Recupera tu contraseña 🔐</h2>
+                            
+                            <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.5;">Hola <strong style="color: #333333;">${user.name}</strong>,</p>
+                            
+                            <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.5;">Recibimos una solicitud para restablecer tu contraseña. Usa el siguiente código para continuar:</p>
+                            
+                            <!-- Code Box -->
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
-                                    <td align="center" style="padding: 30px 0;">
-                                        <div style="background: rgba(102, 126, 234, 0.1); border: 2px solid #667eea; border-radius: 12px; padding: 20px 40px; display: inline-block;">
-                                            <span style="color: #667eea; font-size: 36px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace;">${resetCode}</span>
-                                        </div>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <table cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="background-color: #f0f4ff; border: 2px solid #667eea; border-radius: 8px; padding: 20px 40px;">
+                                                    <span style="color: #667eea; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: 'Courier New', monospace;">${resetCode}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
-                            <p style="margin: 20px 0 30px; color: rgba(255,255,255,0.8); font-size: 16px; line-height: 1.6;">Ingresa este código en la pantalla de recuperación para establecer una nueva contraseña.</p>
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; border-radius: 8px; margin: 30px 0;">
+                            
+                            <p style="margin: 20px 0 30px; color: #666666; font-size: 16px; line-height: 1.5; text-align: center;">Ingresa este código en la pantalla de recuperación</p>
+                            
+                            <!-- Warning Box -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fff9e6; border-left: 4px solid #ffc107; margin: 20px 0;">
                                 <tr>
-                                    <td style="padding: 20px;">
-                                        <p style="margin: 0 0 10px; color: #ffc107; font-size: 14px; font-weight: 600;">⚠️ Información de Seguridad</p>
-                                        <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.5;">• Este código expira en <strong style="color: #ffffff;">15 minutos</strong><br>• Nunca compartas este código con nadie<br>• Si no solicitaste este cambio, ignora este email</p>
+                                    <td style="padding: 15px;">
+                                        <p style="margin: 0 0 10px; color: #f57c00; font-size: 14px; font-weight: 600;">⚠️ Información de Seguridad</p>
+                                        <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.5;">
+                                            • El código expira en <strong>15 minutos</strong><br>
+                                            • Nunca compartas este código<br>
+                                            • Si no solicitaste esto, ignora este email
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
-                            <p style="margin: 30px 0 0; color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6;">Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos.</p>
                         </td>
                     </tr>
+                    
+                    <!-- Footer -->
                     <tr>
-                        <td style="background-color: #0f1117; padding: 30px 40px; border-top: 1px solid rgba(255,255,255,0.1);">
-                            <p style="margin: 0 0 10px; color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;">© 2025 ContaDash. Todos los derechos reservados.</p>
-                            <p style="margin: 0; color: rgba(255,255,255,0.4); font-size: 12px; text-align: center;">Este es un email automático, por favor no respondas a este mensaje.</p>
+                        <td style="background-color: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                            <p style="margin: 0 0 5px; color: #999999; font-size: 12px;">© 2025 ContaDash. Todos los derechos reservados.</p>
+                            <p style="margin: 0; color: #999999; font-size: 12px;">Este es un email automático, no respondas a este mensaje.</p>
                         </td>
                     </tr>
                 </table>
