@@ -41,8 +41,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // 5. Request Sanitization
 app.use(sanitizeRequest)
 
-// 6. CSRF Protection
-app.use(csrfProtection)
+// 6. CSRF Protection (deshabilitado temporalmente para debugging)
+// app.use(csrfProtection)
 
 // 7. Security Audit Logger
 app.use(securityAuditLogger)
