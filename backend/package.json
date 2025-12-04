@@ -15,7 +15,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seeds/seed.ts",
     "prisma:studio": "prisma studio",
-    "cleanup:duplicates": "tsx scripts/cleanup-duplicate-credit-cards.ts"
+    "cleanup:duplicates": "tsx scripts/cleanup-duplicate-credit-cards.ts",
+    "import:data": "tsx src/scripts/import-production-data.ts"
   },
   "keywords": [
     "api",
