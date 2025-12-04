@@ -7,21 +7,8 @@ import rateLimit from 'express-rate-limit'
  * Security Headers Middleware
  * Configura headers de seguridad con Helmet
  */
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001'
-
 export const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", frontendUrl],
-      frameSrc: ["'self'"], // Permitir iframes del mismo origen
-      frameAncestors: ["'self'", frontendUrl], // Permitir ser embebido en el frontend
-    },
-  },
+  contentSecurityPolicy: false, // Deshabilitar CSP temporalmente para deployment
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 })
