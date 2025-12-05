@@ -9,7 +9,7 @@ import { authRateLimit } from '../middleware/security.middleware'
 
 const router = Router()
 
-// Solicitar código de recuperación
+// Rutas de recuperación de contraseña con código
 router.post('/request', authRateLimit, requestPasswordReset)
 
 // Verificar código
