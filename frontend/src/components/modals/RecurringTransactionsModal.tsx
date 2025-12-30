@@ -239,6 +239,7 @@ export default function RecurringTransactionsModal({ open, onClose, onSuccess }:
                     <TableCell align="right">Monto USD</TableCell>
                     <TableCell align="center">Moneda Base</TableCell>
                     <TableCell>Frecuencia</TableCell>
+                    <TableCell>Fecha Inicio</TableCell>
                     <TableCell>Estado</TableCell>
                     <TableCell align="center">Acciones</TableCell>
                   </TableRow>
@@ -339,6 +340,14 @@ export default function RecurringTransactionsModal({ open, onClose, onSuccess }:
                               color: '#94A3B8',
                             }}
                           />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="white">
+                            {new Date(transaction.startDate).toLocaleDateString('es-AR', { 
+                              month: 'long', 
+                              year: 'numeric' 
+                            })}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Chip 
