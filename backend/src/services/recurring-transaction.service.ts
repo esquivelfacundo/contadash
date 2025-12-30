@@ -159,6 +159,61 @@ export async function updateRecurringTransaction(id: string, userId: string, dat
     },
   })
 
+  // Delete transactions that fall outside the new date range
+  if (data.startDate !== undefined || data.endDate !== undefined) {
+    const deleteConditions: any = {
+      recurringTransactionId: id,
+    }
+
+    // Build OR conditions for transactions outside the range
+    const orConditions: any[] = []
+
+    if (data.startDate !== undefined) {
+      const startYear = new Date(data.startDate).getFullYear()
+      const startMonth = new Date(data.startDate).getMonth() + 1
+
+      // Delete transactions before the new start date
+      orConditions.push({
+        OR: [
+          { year: { lt: startYear } },
+          {
+            AND: [
+              { year: startYear },
+              { month: { lt: startMonth } },
+            ],
+          },
+        ],
+      })
+    }
+
+    if (data.endDate !== undefined) {
+      const endYear = new Date(data.endDate).getFullYear()
+      const endMonth = new Date(data.endDate).getMonth() + 1
+
+      // Delete transactions after the new end date
+      orConditions.push({
+        OR: [
+          { year: { gt: endYear } },
+          {
+            AND: [
+              { year: endYear },
+              { month: { gt: endMonth } },
+            ],
+          },
+        ],
+      })
+    }
+
+    if (orConditions.length > 0) {
+      await prisma.transaction.deleteMany({
+        where: {
+          ...deleteConditions,
+          OR: orConditions,
+        },
+      })
+    }
+  }
+
   // Update all future transactions that were not manually modified
   // Only update if amount or description changed
   if (data.amountArs !== undefined || data.amountUsd !== undefined || data.description !== undefined) {
