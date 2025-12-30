@@ -32,23 +32,36 @@ async function fixRecurringTransactions() {
       const amountUsd = Number(recurring.amountUsd)
       const exchangeRate = Number(recurring.exchangeRate)
 
+      console.log(`[Migration]   Analyzing recurring ${recurring.id}:`)
+      console.log(`[Migration]     Current: ${amountUsd} USD = $${amountArs} ARS (rate: ${exchangeRate})`)
+
       // Determine which is the base currency by checking which one was likely entered
-      // If amountArs / exchangeRate ≈ amountUsd, then USD is likely the base
-      // If amountUsd * exchangeRate ≈ amountArs, then USD is likely the base
+      // If amountUsd * exchangeRate ≈ amountArs, then USD is the base
+      // If amountArs / exchangeRate ≈ amountUsd, then ARS is the base
       const calculatedArsFromUsd = amountUsd * exchangeRate
       const calculatedUsdFromArs = amountArs / exchangeRate
 
       const diffFromUsdBase = Math.abs(calculatedArsFromUsd - amountArs)
       const diffFromArsBase = Math.abs(calculatedUsdFromArs - amountUsd)
 
+      console.log(`[Migration]     If USD base: ${amountUsd} * ${exchangeRate} = ${calculatedArsFromUsd} (diff: ${diffFromUsdBase})`)
+      console.log(`[Migration]     If ARS base: ${amountArs} / ${exchangeRate} = ${calculatedUsdFromArs} (diff: ${diffFromArsBase})`)
+
       let newAmountArs: number
       let newAmountUsd: number
 
-      if (diffFromUsdBase < diffFromArsBase) {
+      // Use percentage difference for better accuracy
+      const percentDiffFromUsdBase = (diffFromUsdBase / amountArs) * 100
+      const percentDiffFromArsBase = (diffFromArsBase / amountUsd) * 100
+
+      console.log(`[Migration]     Percent diff USD base: ${percentDiffFromUsdBase.toFixed(2)}%`)
+      console.log(`[Migration]     Percent diff ARS base: ${percentDiffFromArsBase.toFixed(2)}%`)
+
+      if (percentDiffFromUsdBase < percentDiffFromArsBase || percentDiffFromUsdBase < 1) {
         // USD is the base currency
         newAmountUsd = amountUsd
         newAmountArs = 0
-        console.log(`[Migration]   Recurring ${recurring.id}: USD base (${amountUsd} USD)`)
+        console.log(`[Migration]     ✓ Identified as USD base (${amountUsd} USD)`)
         
         // Fix all generated transactions from this recurring transaction
         // Update USD amount to match the recurring transaction's USD amount
@@ -78,7 +91,7 @@ async function fixRecurringTransactions() {
         // ARS is the base currency
         newAmountArs = amountArs
         newAmountUsd = 0
-        console.log(`[Migration]   Recurring ${recurring.id}: ARS base ($${amountArs} ARS)`)
+        console.log(`[Migration]     ✓ Identified as ARS base ($${amountArs} ARS)`)
         
         // Fix all generated transactions from this recurring transaction
         // Update ARS amount to match the recurring transaction's ARS amount
