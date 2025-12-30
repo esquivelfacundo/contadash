@@ -77,12 +77,12 @@ async function loadJanuary2025Income() {
         
         await prisma.transaction.create({
           data: {
-            userId: user.id,
+            user: { connect: { id: user.id } },
             description: tx.description,
             amountArs: tx.amountArs,
             amountUsd: 0, // Will be calculated by the system
             type: 'INCOME',
-            categoryId,
+            category: { connect: { id: categoryId } },
             date: tx.date,
             exchangeRate: 1050, // Approximate rate for January 2025
           },
