@@ -104,6 +104,33 @@ export default function RecurringTransactionsModal({ open, onClose, onSuccess }:
     }).format(amount)
   }
 
+  const formatCurrencyUSD = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(amount)
+  }
+
+  const getBaseCurrency = (transaction: any) => {
+    const amountArs = Number(transaction.amountArs || 0)
+    const amountUsd = Number(transaction.amountUsd || 0)
+    
+    if (amountUsd > 0 && amountArs === 0) {
+      return 'USD'
+    } else if (amountArs > 0 && amountUsd === 0) {
+      return 'ARS'
+    } else if (amountUsd > 0 && amountArs > 0) {
+      // Both set - determine by checking which calculation matches
+      const exchangeRate = Number(transaction.exchangeRate || 1)
+      const calculatedArsFromUsd = amountUsd * exchangeRate
+      const diffFromUsdBase = Math.abs(calculatedArsFromUsd - amountArs)
+      const percentDiff = (diffFromUsdBase / amountArs) * 100
+      return percentDiff < 1 ? 'USD' : 'ARS'
+    }
+    return 'ARS'
+  }
+
   const getFrequencyLabel = (frequency: string) => {
     switch (frequency) {
       case 'MONTHLY': return 'Mensual'
@@ -208,89 +235,140 @@ export default function RecurringTransactionsModal({ open, onClose, onSuccess }:
                     <TableCell>Descripción</TableCell>
                     <TableCell>Categoría</TableCell>
                     <TableCell>Cliente/Empresa</TableCell>
-                    <TableCell align="right">Monto</TableCell>
+                    <TableCell align="right">Monto ARS</TableCell>
+                    <TableCell align="right">Monto USD</TableCell>
+                    <TableCell align="center">Moneda Base</TableCell>
                     <TableCell>Frecuencia</TableCell>
                     <TableCell>Estado</TableCell>
                     <TableCell align="center">Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {currentTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        <Typography variant="subtitle2" fontWeight="bold" color="white">
-                          {transaction.description}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {transaction.category && (
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <span>{transaction.category.icon}</span>
+                  {currentTransactions.map((transaction) => {
+                    const baseCurrency = getBaseCurrency(transaction)
+                    const amountArs = Number(transaction.amountArs || 0)
+                    const amountUsd = Number(transaction.amountUsd || 0)
+                    const exchangeRate = Number(transaction.exchangeRate || 1)
+                    
+                    // Calculate display amounts
+                    let displayArs = amountArs
+                    let displayUsd = amountUsd
+                    
+                    if (baseCurrency === 'USD' && amountUsd > 0) {
+                      displayUsd = amountUsd
+                      displayArs = amountUsd * exchangeRate
+                    } else if (baseCurrency === 'ARS' && amountArs > 0) {
+                      displayArs = amountArs
+                      displayUsd = amountArs / exchangeRate
+                    }
+                    
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          <Typography variant="subtitle2" fontWeight="bold" color="white">
+                            {transaction.description}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {transaction.category && (
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <span>{transaction.category.icon}</span>
+                              <Typography variant="body2" color="white">
+                                {transaction.category.name}
+                              </Typography>
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {transaction.client ? (
                             <Typography variant="body2" color="white">
-                              {transaction.category.name}
+                              {transaction.client.company}
                             </Typography>
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {transaction.client ? (
-                          <Typography variant="body2" color="white">
-                            {transaction.client.company}
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              -
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography 
+                            variant="subtitle2" 
+                            fontWeight={baseCurrency === 'ARS' ? 'bold' : 'normal'}
+                            color={transaction.type === 'INCOME' ? '#10B981' : '#EF4444'}
+                          >
+                            {formatCurrency(displayArs)}
                           </Typography>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            -
+                          {baseCurrency === 'ARS' && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Fijo
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography 
+                            variant="subtitle2" 
+                            fontWeight={baseCurrency === 'USD' ? 'bold' : 'normal'}
+                            color={transaction.type === 'INCOME' ? '#10B981' : '#EF4444'}
+                          >
+                            {formatCurrencyUSD(displayUsd)}
                           </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography 
-                          variant="subtitle2" 
-                          fontWeight="bold" 
-                          color={transaction.type === 'INCOME' ? '#10B981' : '#EF4444'}
-                        >
-                          {formatCurrency(transaction.amountArs)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={getFrequencyLabel(transaction.frequency)}
-                          variant="outlined"
-                          size="small"
-                          sx={{ 
-                            borderColor: '#334155',
-                            color: '#94A3B8',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={transaction.isActive ? 'Activa' : 'Inactiva'}
-                          size="small"
-                          sx={{
-                            bgcolor: transaction.isActive ? '#10B981' : '#6B7280',
-                            color: 'white',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(transaction)}
-                          sx={{ color: '#94A3B8', '&:hover': { color: '#10B981' } }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(transaction.id)}
-                          sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444' } }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          {baseCurrency === 'USD' && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Fijo
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip 
+                            label={baseCurrency}
+                            size="small"
+                            sx={{
+                              bgcolor: baseCurrency === 'USD' ? '#3B82F6' : '#10B981',
+                              color: 'white',
+                              fontWeight: 'bold',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={getFrequencyLabel(transaction.frequency)}
+                            variant="outlined"
+                            size="small"
+                            sx={{ 
+                              borderColor: '#334155',
+                              color: '#94A3B8',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={transaction.isActive ? 'Activa' : 'Inactiva'}
+                            size="small"
+                            sx={{
+                              bgcolor: transaction.isActive ? '#10B981' : '#6B7280',
+                              color: 'white',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEdit(transaction)}
+                            sx={{ color: '#94A3B8', '&:hover': { color: '#10B981' } }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(transaction.id)}
+                            sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444' } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
