@@ -171,6 +171,14 @@ export async function updateRecurringTransaction(id: string, userId: string, dat
 export async function deleteRecurringTransaction(id: string, userId: string) {
   await getRecurringTransactionById(id, userId)
 
+  // First, delete all transactions generated from this recurring transaction
+  await prisma.transaction.deleteMany({
+    where: {
+      recurringTransactionId: id,
+    },
+  })
+
+  // Then delete the recurring transaction itself
   await prisma.recurringTransaction.delete({
     where: { id },
   })

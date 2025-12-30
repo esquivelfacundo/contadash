@@ -179,18 +179,19 @@ export default function RecurringTransactionFormDialog({
       const today = new Date()
       const currentYear = today.getFullYear()
       
-      // Calculate amounts based on currency
-      let finalAmountArs = data.amountArs
-      let finalAmountUsd = data.amountUsd
+      // For recurring transactions, only set the amount in the selected currency
+      // The other currency will be calculated dynamically each month with that month's exchange rate
+      let finalAmountArs = 0
+      let finalAmountUsd = 0
       
       if (data.currency === 'USD') {
-        // Si ingresó en USD, calcular ARS
-        finalAmountArs = data.amountUsd * data.exchangeRate
+        // Si ingresó en USD, solo guardar USD
         finalAmountUsd = data.amountUsd
+        finalAmountArs = 0
       } else {
-        // Si ingresó en ARS, calcular USD
+        // Si ingresó en ARS, solo guardar ARS
         finalAmountArs = data.amountArs
-        finalAmountUsd = data.amountArs / data.exchangeRate
+        finalAmountUsd = 0
       }
       
       // Construir fecha de inicio usando startMonth y startYear
