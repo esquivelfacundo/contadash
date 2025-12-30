@@ -75,20 +75,23 @@ export async function createRecurringTransaction(userId: string, data: any) {
   // Si no se especifica startDate, usar el primer día del mes actual
   const startDate = data.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   
-  // Get current exchange rate to calculate the missing currency amount
+  // Get current exchange rate for reference
   const today = new Date().toISOString().split('T')[0]
   const currentExchangeRate = await getDolarBlueForDate(today)
   
-  // Calculate missing currency amount for display purposes
+  // Store only the base currency amount
+  // The other currency will be calculated dynamically for each month
   let finalAmountArs = data.amountArs
   let finalAmountUsd = data.amountUsd
   
   if (data.amountUsd > 0 && data.amountArs === 0) {
-    // USD is base, calculate ARS with current rate
-    finalAmountArs = data.amountUsd * currentExchangeRate
+    // USD is base, keep only USD amount
+    finalAmountArs = 0
+    finalAmountUsd = data.amountUsd
   } else if (data.amountArs > 0 && data.amountUsd === 0) {
-    // ARS is base, calculate USD with current rate
-    finalAmountUsd = data.amountArs / currentExchangeRate
+    // ARS is base, keep only ARS amount
+    finalAmountArs = data.amountArs
+    finalAmountUsd = 0
   }
   
   return await prisma.recurringTransaction.create({
@@ -130,9 +133,23 @@ export async function createRecurringTransaction(userId: string, data: any) {
 export async function updateRecurringTransaction(id: string, userId: string, data: any) {
   await getRecurringTransactionById(id, userId)
 
+  // If updating amounts, ensure only base currency is stored
+  let updateData = { ...data }
+  if ((data.amountArs !== undefined || data.amountUsd !== undefined)) {
+    if (data.amountUsd !== undefined && data.amountUsd > 0 && (data.amountArs === undefined || data.amountArs === 0)) {
+      // USD is base, clear ARS
+      updateData.amountArs = 0
+      updateData.amountUsd = data.amountUsd
+    } else if (data.amountArs !== undefined && data.amountArs > 0 && (data.amountUsd === undefined || data.amountUsd === 0)) {
+      // ARS is base, clear USD
+      updateData.amountArs = data.amountArs
+      updateData.amountUsd = 0
+    }
+  }
+
   const updated = await prisma.recurringTransaction.update({
     where: { id },
-    data,
+    data: updateData,
     include: {
       category: {
         select: {
