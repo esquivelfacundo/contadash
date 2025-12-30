@@ -5,12 +5,23 @@ const prisma = new PrismaClient()
 /**
  * Script to fix existing recurring transactions that have both amountArs and amountUsd set.
  * This script will identify which is the base currency and set the other to 0.
+ * Also deletes all generated transactions to force regeneration with correct amounts.
  * This script is idempotent and safe to run multiple times.
  */
 async function fixRecurringTransactions() {
   console.log('[Migration] Checking for recurring transactions to fix...')
 
   try {
+    // First, delete ALL generated transactions from recurring transactions
+    // This ensures they regenerate with correct amounts
+    console.log('[Migration] Deleting all generated transactions from recurring transactions...')
+    const allDeletedCount = await prisma.transaction.deleteMany({
+      where: {
+        recurringTransactionId: { not: null },
+      },
+    })
+    console.log(`[Migration] Deleted ${allDeletedCount.count} generated transactions`)
+
     // Get all recurring transactions that have both amounts set (the problem)
     const recurringTransactions = await prisma.recurringTransaction.findMany({
       where: {
@@ -22,7 +33,7 @@ async function fixRecurringTransactions() {
     })
 
     if (recurringTransactions.length === 0) {
-      console.log('[Migration] No recurring transactions need fixing. Skipping.')
+      console.log('[Migration] No recurring transactions need fixing.')
       return
     }
 
@@ -65,16 +76,6 @@ async function fixRecurringTransactions() {
           amountUsd: newAmountUsd,
         },
       })
-
-      // Delete all generated transactions for this recurring transaction
-      // They will be regenerated with correct amounts when the user navigates to those months
-      const deletedCount = await prisma.transaction.deleteMany({
-        where: {
-          recurringTransactionId: recurring.id,
-        },
-      })
-
-      console.log(`[Migration]   Deleted ${deletedCount.count} generated transactions`)
     }
 
     console.log('[Migration] Recurring transactions migration completed successfully!')
