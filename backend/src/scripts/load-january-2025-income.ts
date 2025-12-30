@@ -84,6 +84,8 @@ async function loadJanuary2025Income() {
             type: 'INCOME',
             category: { connect: { id: categoryId } },
             date: tx.date,
+            month: 1, // January
+            year: 2025,
             exchangeRate: 1050, // Approximate rate for January 2025
           },
         })
