@@ -259,6 +259,9 @@ export async function updateTransaction(
     year = date.getUTCFullYear()
   }
 
+  // If transaction is from a recurring transaction, mark it as manually modified
+  const isManuallyModified = existing.recurringTransactionId ? true : existing.isManuallyModified
+
   const transaction = await prisma.transaction.update({
     where: { id },
     data: {
@@ -266,6 +269,7 @@ export async function updateTransaction(
       date: data.date ? new Date(data.date) : undefined,
       month,
       year,
+      isManuallyModified,
     },
     include: {
       category: true,

@@ -62,6 +62,7 @@ model Transaction {
   bankAccountId          String?               @map("bank_account_id")
   isPaid                 Boolean               @default(true) @map("is_paid")
   recurringTransactionId String?               @map("recurring_transaction_id")
+  isManuallyModified     Boolean               @default(false) @map("is_manually_modified")
   category               Category              @relation(fields: [categoryId], references: [id])
   client                 Client?               @relation(fields: [clientId], references: [id])
   creditCard             CreditCard?           @relation(fields: [creditCardId], references: [id])

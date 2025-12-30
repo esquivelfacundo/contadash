@@ -36,6 +36,11 @@ const recurringSchema = z.object({
   exchangeRate: z.number().optional().default(1),
   frequency: z.enum(['MONTHLY', 'YEARLY']),
   dayOfMonth: z.number().min(1).max(31),
+  startMonth: z.number().min(1).max(12),
+  startYear: z.number().min(2020).max(2100),
+  hasEndDate: z.boolean(),
+  endMonth: z.number().min(1).max(12).optional(),
+  endYear: z.number().min(2020).max(2100).optional(),
   generateHistorical: z.boolean(),
   historicalStartMonth: z.number().min(1).max(12).optional(),
   historicalStartYear: z.number().min(2020).max(2100).optional(),
@@ -95,6 +100,11 @@ export default function RecurringTransactionFormDialog({
           exchangeRate: Number(recurring.exchangeRate || 1),
           frequency: recurring.frequency === 'DAILY' || recurring.frequency === 'WEEKLY' ? 'MONTHLY' : recurring.frequency,
           dayOfMonth: recurring.dayOfMonth || new Date().getDate(),
+          startMonth: recurring.startDate ? new Date(recurring.startDate).getMonth() + 1 : new Date().getMonth() + 1,
+          startYear: recurring.startDate ? new Date(recurring.startDate).getFullYear() : new Date().getFullYear(),
+          hasEndDate: !!recurring.endDate,
+          endMonth: recurring.endDate ? new Date(recurring.endDate).getMonth() + 1 : 12,
+          endYear: recurring.endDate ? new Date(recurring.endDate).getFullYear() : new Date().getFullYear(),
           generateHistorical: false,
           historicalStartMonth: 1,
           historicalStartYear: new Date().getFullYear(),
@@ -111,6 +121,11 @@ export default function RecurringTransactionFormDialog({
           exchangeRate: 1,
           frequency: 'MONTHLY',
           dayOfMonth: new Date().getDate(),
+          startMonth: new Date().getMonth() + 1,
+          startYear: new Date().getFullYear(),
+          hasEndDate: false,
+          endMonth: 12,
+          endYear: new Date().getFullYear(),
           generateHistorical: false,
           historicalStartMonth: 1,
           historicalStartYear: new Date().getFullYear(),
@@ -122,6 +137,7 @@ export default function RecurringTransactionFormDialog({
   const amountArs = watch('amountArs')
   const amountUsd = watch('amountUsd')
   const exchangeRate = watch('exchangeRate')
+  const hasEndDate = watch('hasEndDate')
   const generateHistorical = watch('generateHistorical')
 
   useEffect(() => {
@@ -177,12 +193,13 @@ export default function RecurringTransactionFormDialog({
         finalAmountUsd = data.amountArs / data.exchangeRate
       }
       
-      // Determinar la fecha de inicio
-      // Si se marcó histórico, usar el mes/año seleccionado
-      // Si no, usar la fecha actual
-      const startDate = data.generateHistorical && data.historicalStartMonth && data.historicalStartYear
-        ? new Date(data.historicalStartYear, data.historicalStartMonth - 1, data.dayOfMonth)
-        : new Date(today.getFullYear(), today.getMonth(), data.dayOfMonth)
+      // Construir fecha de inicio usando startMonth y startYear
+      const startDate = new Date(data.startYear, data.startMonth - 1, data.dayOfMonth)
+      
+      // Construir fecha de fin si está marcada
+      const endDate = data.hasEndDate && data.endMonth && data.endYear
+        ? new Date(data.endYear, data.endMonth - 1, data.dayOfMonth)
+        : null
       
       const payload = {
         type: data.type,
@@ -195,7 +212,7 @@ export default function RecurringTransactionFormDialog({
         exchangeRate: data.exchangeRate,
         frequency: data.frequency,
         startDate: startDate.toISOString(),
-        endDate: undefined, // Sin fecha fin
+        endDate: endDate ? endDate.toISOString() : undefined,
         dayOfMonth: data.dayOfMonth,
         isActive: true,
       }
@@ -476,6 +493,138 @@ export default function RecurringTransactionFormDialog({
                 )}
               />
             </Grid>
+
+            {/* Fecha de Inicio */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+                Fecha de Inicio
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="startMonth"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    select
+                    fullWidth
+                    label="Mes de Inicio"
+                    error={!!errors.startMonth}
+                    helperText={errors.startMonth?.message}
+                  >
+                    <MenuItem value={1}>Enero</MenuItem>
+                    <MenuItem value={2}>Febrero</MenuItem>
+                    <MenuItem value={3}>Marzo</MenuItem>
+                    <MenuItem value={4}>Abril</MenuItem>
+                    <MenuItem value={5}>Mayo</MenuItem>
+                    <MenuItem value={6}>Junio</MenuItem>
+                    <MenuItem value={7}>Julio</MenuItem>
+                    <MenuItem value={8}>Agosto</MenuItem>
+                    <MenuItem value={9}>Septiembre</MenuItem>
+                    <MenuItem value={10}>Octubre</MenuItem>
+                    <MenuItem value={11}>Noviembre</MenuItem>
+                    <MenuItem value={12}>Diciembre</MenuItem>
+                  </TextField>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="startYear"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    select
+                    fullWidth
+                    label="Año de Inicio"
+                    error={!!errors.startYear}
+                    helperText={errors.startYear?.message}
+                  >
+                    {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
+                      <MenuItem key={year} value={year}>
+                        {year}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            {/* Fecha de Fin */}
+            <Grid item xs={12}>
+              <Controller
+                name="hasEndDate"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    }
+                    label="Establecer fecha de finalización"
+                  />
+                )}
+              />
+            </Grid>
+            {hasEndDate && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="endMonth"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        select
+                        fullWidth
+                        label="Mes de Fin"
+                        error={!!errors.endMonth}
+                        helperText={errors.endMonth?.message}
+                      >
+                        <MenuItem value={1}>Enero</MenuItem>
+                        <MenuItem value={2}>Febrero</MenuItem>
+                        <MenuItem value={3}>Marzo</MenuItem>
+                        <MenuItem value={4}>Abril</MenuItem>
+                        <MenuItem value={5}>Mayo</MenuItem>
+                        <MenuItem value={6}>Junio</MenuItem>
+                        <MenuItem value={7}>Julio</MenuItem>
+                        <MenuItem value={8}>Agosto</MenuItem>
+                        <MenuItem value={9}>Septiembre</MenuItem>
+                        <MenuItem value={10}>Octubre</MenuItem>
+                        <MenuItem value={11}>Noviembre</MenuItem>
+                        <MenuItem value={12}>Diciembre</MenuItem>
+                      </TextField>
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Controller
+                    name="endYear"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        select
+                        fullWidth
+                        label="Año de Fin"
+                        error={!!errors.endYear}
+                        helperText={errors.endYear?.message}
+                      >
+                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
+                          <MenuItem key={year} value={year}>
+                            {year}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
+                  />
+                </Grid>
+              </>
+            )}
 
             {!recurring && (
               <Grid item xs={12}>

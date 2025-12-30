@@ -111,7 +111,7 @@ export async function createRecurringTransaction(userId: string, data: any) {
 export async function updateRecurringTransaction(id: string, userId: string, data: any) {
   await getRecurringTransactionById(id, userId)
 
-  return await prisma.recurringTransaction.update({
+  const updated = await prisma.recurringTransaction.update({
     where: { id },
     data,
     include: {
@@ -139,6 +139,33 @@ export async function updateRecurringTransaction(id: string, userId: string, dat
       },
     },
   })
+
+  // Update all future transactions that were not manually modified
+  // Only update if amount or description changed
+  if (data.amountArs !== undefined || data.amountUsd !== undefined || data.description !== undefined) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    await prisma.transaction.updateMany({
+      where: {
+        recurringTransactionId: id,
+        isManuallyModified: false,
+        date: {
+          gte: today,
+        },
+      },
+      data: {
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.amountArs !== undefined && { amountArs: data.amountArs }),
+        ...(data.amountUsd !== undefined && { amountUsd: data.amountUsd }),
+        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+        ...(data.clientId !== undefined && { clientId: data.clientId }),
+        ...(data.creditCardId !== undefined && { creditCardId: data.creditCardId }),
+      },
+    })
+  }
+
+  return updated
 }
 
 export async function deleteRecurringTransaction(id: string, userId: string) {
