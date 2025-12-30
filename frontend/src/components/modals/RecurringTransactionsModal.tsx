@@ -344,7 +344,8 @@ export default function RecurringTransactionsModal({ open, onClose, onSuccess }:
                         <TableCell>
                           <Typography variant="body2" color="white">
                             {new Date(transaction.startDate).toLocaleDateString('es-AR', { 
-                              month: 'long', 
+                              day: '2-digit',
+                              month: '2-digit', 
                               year: 'numeric' 
                             })}
                           </Typography>
