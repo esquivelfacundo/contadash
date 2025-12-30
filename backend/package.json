@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
     "build": "prisma generate && (tsc || exit 0) && cp -r src/templates dist/ && cp -r src/scripts dist/",
-    "start": "prisma migrate deploy && node dist/scripts/fix-recurring-dates-utc.js && node dist/scripts/load-january-2025-income.js && node dist/scripts/load-february-2025-income.js && node dist/scripts/load-march-2025-income.js && node dist/scripts/load-april-2025-income.js && node dist/scripts/load-may-2025-income.js && node dist/scripts/load-june-2025-income.js && node dist/scripts/load-july-2025-income.js && node dist/scripts/load-august-2025-income.js && node dist/scripts/load-september-2025-income.js && node dist/scripts/load-october-2025-income.js && node dist/server.js",
+    "start": "prisma migrate deploy && node dist/scripts/fix-recurring-dates-utc.js && node dist/scripts/load-january-2025-income.js && node dist/scripts/load-february-2025-income.js && node dist/scripts/load-march-2025-income.js && node dist/scripts/load-april-2025-income.js && node dist/scripts/load-may-2025-income.js && node dist/scripts/load-june-2025-income.js && node dist/scripts/load-july-2025-income.js && node dist/scripts/load-august-2025-income.js && node dist/scripts/load-september-2025-income.js && node dist/scripts/load-october-2025-income.js && node dist/scripts/load-november-2025-income.js && node dist/server.js",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "test": "vitest",
