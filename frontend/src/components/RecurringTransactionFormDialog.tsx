@@ -148,6 +148,54 @@ export default function RecurringTransactionFormDialog({
     }
   }, [open])
 
+  useEffect(() => {
+    if (recurring) {
+      reset({
+        type: recurring.type,
+        categoryId: recurring.categoryId,
+        clientId: recurring.clientId || '',
+        creditCardId: recurring.creditCardId || '',
+        description: recurring.description,
+        currency: Number(recurring.amountUsd) > 0 && Number(recurring.amountArs) === 0 ? 'USD' : 'ARS',
+        amountArs: Number(recurring.amountArs),
+        amountUsd: Number(recurring.amountUsd || 0),
+        exchangeRate: Number(recurring.exchangeRate || 1),
+        frequency: recurring.frequency === 'DAILY' || recurring.frequency === 'WEEKLY' ? 'MONTHLY' : recurring.frequency,
+        dayOfMonth: recurring.dayOfMonth || new Date().getDate(),
+        startMonth: recurring.startDate ? new Date(recurring.startDate).getMonth() + 1 : new Date().getMonth() + 1,
+        startYear: recurring.startDate ? new Date(recurring.startDate).getFullYear() : new Date().getFullYear(),
+        hasEndDate: !!recurring.endDate,
+        endMonth: recurring.endDate ? new Date(recurring.endDate).getMonth() + 1 : 12,
+        endYear: recurring.endDate ? new Date(recurring.endDate).getFullYear() : new Date().getFullYear(),
+        generateHistorical: false,
+        historicalStartMonth: 1,
+        historicalStartYear: new Date().getFullYear(),
+      })
+    } else {
+      reset({
+        type: 'EXPENSE',
+        categoryId: '',
+        clientId: '',
+        creditCardId: '',
+        description: '',
+        currency: 'ARS',
+        amountArs: 0,
+        amountUsd: 0,
+        exchangeRate: 1,
+        frequency: 'MONTHLY',
+        dayOfMonth: new Date().getDate(),
+        startMonth: new Date().getMonth() + 1,
+        startYear: new Date().getFullYear(),
+        hasEndDate: false,
+        endMonth: 12,
+        endYear: new Date().getFullYear(),
+        generateHistorical: false,
+        historicalStartMonth: 1,
+        historicalStartYear: new Date().getFullYear(),
+      })
+    }
+  }, [recurring, reset])
+
   const loadCategories = async () => {
     try {
       const data = await categoriesApi.getAll()
