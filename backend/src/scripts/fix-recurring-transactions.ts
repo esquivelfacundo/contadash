@@ -12,16 +12,6 @@ async function fixRecurringTransactions() {
   console.log('[Migration] Checking for recurring transactions to fix...')
 
   try {
-    // First, delete ALL generated transactions from recurring transactions
-    // This ensures they regenerate with correct amounts
-    console.log('[Migration] Deleting all generated transactions from recurring transactions...')
-    const allDeletedCount = await prisma.transaction.deleteMany({
-      where: {
-        recurringTransactionId: { not: null },
-      },
-    })
-    console.log(`[Migration] Deleted ${allDeletedCount.count} generated transactions`)
-
     // Get all recurring transactions that have both amounts set (the problem)
     const recurringTransactions = await prisma.recurringTransaction.findMany({
       where: {
@@ -32,12 +22,10 @@ async function fixRecurringTransactions() {
       },
     })
 
-    if (recurringTransactions.length === 0) {
-      console.log('[Migration] No recurring transactions need fixing.')
-      return
-    }
+    console.log(`[Migration] Found ${recurringTransactions.length} recurring transactions with both amounts set`)
 
-    console.log(`[Migration] Found ${recurringTransactions.length} recurring transactions to fix`)
+    let totalFixed = 0
+    let totalTransactionsUpdated = 0
 
     for (const recurring of recurringTransactions) {
       const amountArs = Number(recurring.amountArs)
@@ -60,12 +48,61 @@ async function fixRecurringTransactions() {
         // USD is the base currency
         newAmountUsd = amountUsd
         newAmountArs = 0
-        console.log(`[Migration]   Fixed: ${recurring.id} - USD base (${amountUsd} USD)`)
+        console.log(`[Migration]   Recurring ${recurring.id}: USD base (${amountUsd} USD)`)
+        
+        // Fix all generated transactions from this recurring transaction
+        // Update USD amount to match the recurring transaction's USD amount
+        // Recalculate ARS based on each transaction's exchange rate
+        const generatedTransactions = await prisma.transaction.findMany({
+          where: { recurringTransactionId: recurring.id },
+        })
+        
+        for (const transaction of generatedTransactions) {
+          const txExchangeRate = Number(transaction.exchangeRate)
+          const correctAmountUsd = amountUsd
+          const correctAmountArs = amountUsd * txExchangeRate
+          
+          await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+              amountUsd: correctAmountUsd,
+              amountArs: correctAmountArs,
+            },
+          })
+          totalTransactionsUpdated++
+        }
+        
+        console.log(`[Migration]     Updated ${generatedTransactions.length} generated transactions`)
+        
       } else {
         // ARS is the base currency
         newAmountArs = amountArs
         newAmountUsd = 0
-        console.log(`[Migration]   Fixed: ${recurring.id} - ARS base ($${amountArs} ARS)`)
+        console.log(`[Migration]   Recurring ${recurring.id}: ARS base ($${amountArs} ARS)`)
+        
+        // Fix all generated transactions from this recurring transaction
+        // Update ARS amount to match the recurring transaction's ARS amount
+        // Recalculate USD based on each transaction's exchange rate
+        const generatedTransactions = await prisma.transaction.findMany({
+          where: { recurringTransactionId: recurring.id },
+        })
+        
+        for (const transaction of generatedTransactions) {
+          const txExchangeRate = Number(transaction.exchangeRate)
+          const correctAmountArs = amountArs
+          const correctAmountUsd = amountArs / txExchangeRate
+          
+          await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+              amountArs: correctAmountArs,
+              amountUsd: correctAmountUsd,
+            },
+          })
+          totalTransactionsUpdated++
+        }
+        
+        console.log(`[Migration]     Updated ${generatedTransactions.length} generated transactions`)
       }
 
       // Update the recurring transaction
@@ -76,8 +113,12 @@ async function fixRecurringTransactions() {
           amountUsd: newAmountUsd,
         },
       })
+      
+      totalFixed++
     }
 
+    console.log(`[Migration] Fixed ${totalFixed} recurring transactions`)
+    console.log(`[Migration] Updated ${totalTransactionsUpdated} generated transactions`)
     console.log('[Migration] Recurring transactions migration completed successfully!')
   } catch (error) {
     console.error('Error during migration:', error)
