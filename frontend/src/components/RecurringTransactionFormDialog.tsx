@@ -33,7 +33,7 @@ const recurringSchema = z.object({
   currency: z.enum(['ARS', 'USD']),
   amountArs: z.number().min(0),
   amountUsd: z.number().min(0),
-  exchangeRate: z.number().positive('Cotización debe ser positiva'),
+  exchangeRate: z.number().optional().default(1),
   frequency: z.enum(['MONTHLY', 'YEARLY']),
   dayOfMonth: z.number().min(1).max(31),
   generateHistorical: z.boolean(),
@@ -92,7 +92,7 @@ export default function RecurringTransactionFormDialog({
           currency: 'ARS',
           amountArs: Number(recurring.amountArs),
           amountUsd: Number(recurring.amountUsd || 0),
-          exchangeRate: Number(recurring.exchangeRate || 0),
+          exchangeRate: Number(recurring.exchangeRate || 1),
           frequency: recurring.frequency === 'DAILY' || recurring.frequency === 'WEEKLY' ? 'MONTHLY' : recurring.frequency,
           dayOfMonth: recurring.dayOfMonth || new Date().getDate(),
           generateHistorical: false,
@@ -108,7 +108,7 @@ export default function RecurringTransactionFormDialog({
           currency: 'ARS',
           amountArs: 0,
           amountUsd: 0,
-          exchangeRate: 0,
+          exchangeRate: 1,
           frequency: 'MONTHLY',
           dayOfMonth: new Date().getDate(),
           generateHistorical: false,
@@ -421,7 +421,7 @@ export default function RecurringTransactionFormDialog({
             </Grid>
 
             {currency === 'ARS' ? (
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name="amountArs"
                   control={control}
@@ -439,7 +439,7 @@ export default function RecurringTransactionFormDialog({
                 />
               </Grid>
             ) : (
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <Controller
                   name="amountUsd"
                   control={control}
@@ -458,25 +458,7 @@ export default function RecurringTransactionFormDialog({
               </Grid>
             )}
 
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="exchangeRate"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="Cotización USD"
-                    type="number"
-                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                    error={!!errors.exchangeRate}
-                    helperText={errors.exchangeRate?.message}
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <Controller
                 name="dayOfMonth"
                 control={control}

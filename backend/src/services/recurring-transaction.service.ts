@@ -1,4 +1,5 @@
 import { prisma } from '../config/database'
+import { getDolarBlueForDate } from './dolarapi.service'
 
 export async function getAllRecurringTransactions(userId: string, isActive?: boolean) {
   return await prisma.recurringTransaction.findMany({
@@ -210,6 +211,38 @@ export async function generateTransactionFromRecurring(recurringId: string, user
     throw new Error('Ya existe una transacción generada para este mes')
   }
 
+  // Get exchange rate for the specific date
+  const dateStr = date.toISOString().split('T')[0]
+  const exchangeRate = await getDolarBlueForDate(dateStr)
+
+  // Calculate amounts based on the exchange rate for this date
+  // Convert Decimal to Number for calculations
+  const baseAmountArs = Number(recurring.amountArs)
+  const baseAmountUsd = Number(recurring.amountUsd)
+  const storedExchangeRate = Number(recurring.exchangeRate || 1)
+  
+  let amountArs = baseAmountArs
+  let amountUsd = baseAmountUsd
+
+  // Recalculate based on which currency is the base
+  if (baseAmountUsd > 0 && baseAmountArs > 0) {
+    // If both amounts exist, use the stored ratio to determine base currency
+    const storedRatio = baseAmountArs / baseAmountUsd
+    if (Math.abs(storedRatio - storedExchangeRate) < 1) {
+      // USD is base currency, recalculate ARS
+      amountArs = baseAmountUsd * exchangeRate
+    } else {
+      // ARS is base currency, recalculate USD
+      amountUsd = baseAmountArs / exchangeRate
+    }
+  } else if (baseAmountUsd > 0) {
+    // USD is base, calculate ARS
+    amountArs = baseAmountUsd * exchangeRate
+  } else if (baseAmountArs > 0) {
+    // ARS is base, calculate USD
+    amountUsd = baseAmountArs / exchangeRate
+  }
+
   return await prisma.transaction.create({
     data: {
       userId,
@@ -222,9 +255,9 @@ export async function generateTransactionFromRecurring(recurringId: string, user
       creditCardId: recurring.creditCardId,
       recurringTransactionId: recurringId,
       description: recurring.description,
-      amountArs: recurring.amountArs,
-      amountUsd: recurring.amountUsd,
-      exchangeRate: recurring.exchangeRate,
+      amountArs,
+      amountUsd,
+      exchangeRate,
       isPaid: false, // Start as unpaid for recurring
       notes: recurring.notes,
     },
