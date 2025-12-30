@@ -468,14 +468,22 @@ async function autoGenerateRecurringTransactions(userId: string, month: number, 
     // Check if this month is within the recurring transaction's date range
     const targetDate = new Date(year, month - 1, recurring.dayOfMonth || 1)
     
-    // Check start date
-    if (recurring.startDate && targetDate < recurring.startDate) {
-      continue
+    // Check start date - compare year and month only
+    if (recurring.startDate) {
+      const startYear = recurring.startDate.getFullYear()
+      const startMonth = recurring.startDate.getMonth() + 1
+      if (year < startYear || (year === startYear && month < startMonth)) {
+        continue
+      }
     }
 
-    // Check end date
-    if (recurring.endDate && targetDate > recurring.endDate) {
-      continue
+    // Check end date - compare year and month only
+    if (recurring.endDate) {
+      const endYear = recurring.endDate.getFullYear()
+      const endMonth = recurring.endDate.getMonth() + 1
+      if (year > endYear || (year === endYear && month > endMonth)) {
+        continue
+      }
     }
 
     // Check frequency
@@ -493,9 +501,16 @@ async function autoGenerateRecurringTransactions(userId: string, month: number, 
     }
 
     // Calculate amounts based on currency
-    // TODO: Get historical exchange rate for targetDate
-    // For now, use current exchange rate from API or recurring's rate
-    const exchangeRate = Number(recurring.exchangeRate)
+    // Get historical exchange rate for the target date
+    const dateStr = targetDate.toISOString().split('T')[0]
+    let exchangeRate: number
+    try {
+      const { getDolarBlueForDate } = await import('./dolarapi.service')
+      exchangeRate = await getDolarBlueForDate(dateStr)
+    } catch (error) {
+      // Fallback to stored exchange rate if API fails
+      exchangeRate = Number(recurring.exchangeRate)
+    }
     
     let amountArs = Number(recurring.amountArs)
     let amountUsd = Number(recurring.amountUsd)
