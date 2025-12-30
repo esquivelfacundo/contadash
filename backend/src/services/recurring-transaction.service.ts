@@ -231,24 +231,54 @@ export async function updateRecurringTransaction(id: string, userId: string, dat
     }
   }
 
-  // Update all future transactions that were not manually modified
-  // Only update if amount or description changed
-  if (data.amountArs !== undefined || data.amountUsd !== undefined || data.description !== undefined) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+  // Update ALL generated transactions (not just future ones)
+  // Get all generated transactions to update them properly
+  const generatedTransactions = await prisma.transaction.findMany({
+    where: {
+      recurringTransactionId: id,
+      isManuallyModified: false,
+    },
+  })
 
-    await prisma.transaction.updateMany({
-      where: {
-        recurringTransactionId: id,
-        isManuallyModified: false,
-        date: {
-          gte: today,
-        },
-      },
+  // Determine base currency from updated data
+  const finalAmountArs = updateData.amountArs !== undefined ? updateData.amountArs : updated.amountArs
+  const finalAmountUsd = updateData.amountUsd !== undefined ? updateData.amountUsd : updated.amountUsd
+  
+  let baseCurrency: 'USD' | 'ARS' | 'NONE' = 'NONE'
+  if (Number(finalAmountUsd) > 0 && Number(finalAmountArs) === 0) {
+    baseCurrency = 'USD'
+  } else if (Number(finalAmountArs) > 0 && Number(finalAmountUsd) === 0) {
+    baseCurrency = 'ARS'
+  }
+
+  // Update each generated transaction
+  for (const transaction of generatedTransactions) {
+    const txExchangeRate = Number(transaction.exchangeRate || 1)
+    let correctAmountUsd: number
+    let correctAmountArs: number
+
+    if (baseCurrency === 'USD') {
+      // USD is fixed, recalculate ARS
+      correctAmountUsd = Number(finalAmountUsd)
+      correctAmountArs = correctAmountUsd * txExchangeRate
+    } else if (baseCurrency === 'ARS') {
+      // ARS is fixed, recalculate USD
+      correctAmountArs = Number(finalAmountArs)
+      correctAmountUsd = correctAmountArs / txExchangeRate
+    } else {
+      // No clear base currency, skip amount update
+      correctAmountUsd = Number(transaction.amountUsd)
+      correctAmountArs = Number(transaction.amountArs)
+    }
+
+    await prisma.transaction.update({
+      where: { id: transaction.id },
       data: {
         ...(data.description !== undefined && { description: data.description }),
-        ...(data.amountArs !== undefined && { amountArs: data.amountArs }),
-        ...(data.amountUsd !== undefined && { amountUsd: data.amountUsd }),
+        ...(baseCurrency !== 'NONE' && { 
+          amountArs: correctAmountArs,
+          amountUsd: correctAmountUsd,
+        }),
         ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
         ...(data.clientId !== undefined && { clientId: data.clientId }),
         ...(data.creditCardId !== undefined && { creditCardId: data.creditCardId }),
