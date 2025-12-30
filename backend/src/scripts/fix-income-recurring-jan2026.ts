@@ -115,7 +115,7 @@ async function fixIncomeRecurringTransactions() {
       { description: 'Vickel Blends (Linode 2GB)', client: 'Vickel Blends', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'Club San Martín (Linode 4GB)', client: 'Club San Martín', amount: 432.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'Urbaterra (Linode 2GB)', client: 'Urbaterra', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
-      { description: 'Tienda Amor (Linode 2GB)', client: 'BARI Oil', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
+      { description: 'Tienda Amor (Linode 2GB)', client: '', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'ESEICA NEA (cPanel)', client: 'ESEICA NEA', amount: 192.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'ESEICA NEA (Linode 4GB)', client: 'ESEICA NEA', amount: 240.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'GEBO Consultores (Linode 2GB)', client: 'GEBO Consultores', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
@@ -143,8 +143,9 @@ async function fixIncomeRecurringTransactions() {
         continue
       }
 
-      if (!clientId && transaction.client) {
-        console.warn(`[Fix Income] ❌ Client not found: ${transaction.client} - Skipping: ${transaction.description}`)
+      // Skip only if client is specified but not found
+      if (!clientId && transaction.client && transaction.client.trim() !== '') {
+        console.warn(`[Fix Income] ❌ Client not found: "${transaction.client}" - Skipping: ${transaction.description}`)
         continue
       }
 
@@ -160,7 +161,7 @@ async function fixIncomeRecurringTransactions() {
             type: 'INCOME',
             frequency: transaction.frequency,
             categoryId: categoryId,
-            clientId: clientId,
+            ...(clientId && { clientId: clientId }),
             startDate: startDate,
             isActive: true,
             exchangeRate: 1525,
