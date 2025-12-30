@@ -78,8 +78,8 @@ async function fixIncomeRecurringTransactions() {
       return category?.id
     }
 
-    // Start date: January 1, 2026
-    const startDate = new Date(2026, 0, 1)
+    // Start date: January 1, 2026 (explicitly set to day 1)
+    const startDate = new Date('2026-01-01T00:00:00.000Z')
 
     // Step 3: Create correct INCOME transactions from screenshots
     console.log('\n[Fix Income] Step 3: Creating correct INCOME recurring transactions...')
@@ -115,7 +115,7 @@ async function fixIncomeRecurringTransactions() {
       { description: 'Vickel Blends (Linode 2GB)', client: 'Vickel Blends', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'Club San Martín (Linode 4GB)', client: 'Club San Martín', amount: 432.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'Urbaterra (Linode 2GB)', client: 'Urbaterra', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
-      { description: 'Tienda Amor (Linode 2GB)', client: '', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
+      { description: 'Tienda Amor (Linode 2GB)', client: 'BARI Oil', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'ESEICA NEA (cPanel)', client: 'ESEICA NEA', amount: 192.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'ESEICA NEA (Linode 4GB)', client: 'ESEICA NEA', amount: 240.00, category: 'Servidores', frequency: 'YEARLY' },
       { description: 'GEBO Consultores (Linode 2GB)', client: 'GEBO Consultores', amount: 120.00, category: 'Servidores', frequency: 'YEARLY' },
@@ -138,13 +138,13 @@ async function fixIncomeRecurringTransactions() {
       const clientId = findClient(transaction.client)
       const categoryId = findCategory(transaction.category)
 
-      if (!clientId) {
-        console.warn(`[Fix Income] Client not found: ${transaction.client} - Skipping`)
+      if (!categoryId) {
+        console.warn(`[Fix Income] ❌ Category not found: ${transaction.category} - Skipping: ${transaction.description}`)
         continue
       }
 
-      if (!categoryId) {
-        console.warn(`[Fix Income] Category not found: ${transaction.category} - Skipping`)
+      if (!clientId && transaction.client) {
+        console.warn(`[Fix Income] ❌ Client not found: ${transaction.client} - Skipping: ${transaction.description}`)
         continue
       }
 
