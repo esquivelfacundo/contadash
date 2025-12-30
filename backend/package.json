@@ -5,8 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
-    "build": "prisma generate && (tsc || exit 0) && cp -r src/templates dist/",
-    "start": "prisma migrate deploy && tsx src/scripts/fix-recurring-transactions.ts && node dist/server.js",
+    "build": "prisma generate && (tsc || exit 0) && cp -r src/templates dist/ && cp -r src/scripts dist/",
+    "start": "prisma migrate deploy && node dist/scripts/fix-recurring-transactions.js && node dist/server.js",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "test": "vitest",
