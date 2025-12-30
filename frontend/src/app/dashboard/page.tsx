@@ -216,6 +216,13 @@ function DashboardPage() {
     }
   }, [selectedCategoryMonth, selectedYear])
 
+  // Cargar resumen anual cuando cambie el año seleccionado
+  useEffect(() => {
+    if (!loading) {
+      loadYearlySummary()
+    }
+  }, [selectedYear])
+
   // Resetear páginas cuando cambien los filtros
   useEffect(() => {
     setCardPage(0)
