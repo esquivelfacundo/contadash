@@ -11,6 +11,7 @@ export interface Transaction {
   amountUsd: number
   exchangeRate: number
   notes?: string
+  isPaid: boolean
   category: {
     id: string
     name: string
@@ -33,6 +34,7 @@ export interface CreateTransactionInput {
   amountUsd: number
   exchangeRate: number
   notes?: string
+  isPaid?: boolean
 }
 
 export const transactionsApi = {

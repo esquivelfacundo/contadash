@@ -40,6 +40,8 @@ import {
   History,
   Search,
   FilterList,
+  CheckCircle,
+  RadioButtonUnchecked,
 } from '@mui/icons-material'
 import DashboardLayout from '@/components/DashboardLayout'
 import IncomeTransactionDialog from '@/components/IncomeTransactionDialog'
@@ -295,6 +297,21 @@ export default function MonthlyPage() {
       'success'
     )
     loadMonthlyData()
+  }
+
+  const handleTogglePaid = async (transaction: any) => {
+    try {
+      await transactionsApi.update(transaction.id, {
+        isPaid: !transaction.isPaid
+      })
+      showNotification(
+        transaction.isPaid ? 'Marcado como no pagado' : 'Marcado como pagado',
+        'success'
+      )
+      loadMonthlyData()
+    } catch (err) {
+      showNotification('Error al actualizar estado de pago', 'error')
+    }
   }
 
   // Separate income and expense transactions
@@ -860,7 +877,15 @@ export default function MonthlyPage() {
                   </TableHead>
                   <TableBody>
                     {incomeTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
+                      <TableRow 
+                        key={transaction.id}
+                        sx={{
+                          bgcolor: transaction.isPaid ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                          '&:hover': {
+                            bgcolor: transaction.isPaid ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                          },
+                        }}
+                      >
                         <TableCell>
                           {new Date(transaction.date).toLocaleDateString('es-AR')}
                         </TableCell>
@@ -905,6 +930,14 @@ export default function MonthlyPage() {
                           {currentDolarRate !== null ? `$${currentDolarRate.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            color={transaction.isPaid ? "success" : "default"}
+                            onClick={() => handleTogglePaid(transaction)}
+                            title={transaction.isPaid ? "Marcar como no pagado" : "Marcar como pagado"}
+                          >
+                            {transaction.isPaid ? <CheckCircle fontSize="small" /> : <RadioButtonUnchecked fontSize="small" />}
+                          </IconButton>
                           {transaction.attachmentUrl && (
                             <IconButton
                               size="small"
@@ -1076,7 +1109,15 @@ export default function MonthlyPage() {
                   </TableHead>
                   <TableBody>
                     {expenseTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
+                      <TableRow 
+                        key={transaction.id}
+                        sx={{
+                          bgcolor: transaction.isPaid ? 'rgba(234, 179, 8, 0.15)' : 'transparent',
+                          '&:hover': {
+                            bgcolor: transaction.isPaid ? 'rgba(234, 179, 8, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                          },
+                        }}
+                      >
                         <TableCell>
                           {new Date(transaction.date).toLocaleDateString('es-AR')}
                         </TableCell>
@@ -1121,6 +1162,14 @@ export default function MonthlyPage() {
                           {currentDolarRate !== null ? `$${currentDolarRate.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            color={transaction.isPaid ? "warning" : "default"}
+                            onClick={() => handleTogglePaid(transaction)}
+                            title={transaction.isPaid ? "Marcar como no pagado" : "Marcar como pagado"}
+                          >
+                            {transaction.isPaid ? <CheckCircle fontSize="small" /> : <RadioButtonUnchecked fontSize="small" />}
+                          </IconButton>
                           {transaction.attachmentUrl && (
                             <IconButton
                               size="small"
