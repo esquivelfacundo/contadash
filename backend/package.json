@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
-    "build": "prisma generate && (tsc || exit 0) && cp -r src/templates dist/ && cp -r src/scripts dist/ && find dist/scripts -name '*.ts' -exec sh -c 'mv \"$1\" \"${1%.ts}.js\"' _ {} \\;",
+    "build": "prisma generate && (tsc || exit 0) && cp -r src/templates dist/ && find dist/scripts -name '*.ts' -type f -delete",
     "start": "prisma migrate deploy && node dist/scripts/fix-recurring-dates-utc.js && node dist/scripts/delete-duplicate-2025-income.js && node dist/scripts/delete-duplicate-2025-expenses.js && node dist/scripts/load-2024-income.js && node dist/scripts/load-2024-expenses.js && node dist/server.js",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
