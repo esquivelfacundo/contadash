@@ -31,7 +31,7 @@ export async function getAllRecurringTransactions(userId: string, isActive?: boo
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { startDate: 'asc' },
   })
 }
 
