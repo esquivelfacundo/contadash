@@ -16,7 +16,8 @@
     "prisma:seed": "tsx prisma/seeds/seed.ts",
     "prisma:studio": "prisma studio",
     "cleanup:duplicates": "tsx scripts/cleanup-duplicate-credit-cards.ts",
-    "import:data": "tsx src/scripts/import-production-data.ts"
+    "import:data": "tsx src/scripts/import-production-data.ts",
+    "fix:recurring": "tsx src/scripts/fix-recurring-transactions.ts"
   },
   "keywords": [
     "api",
