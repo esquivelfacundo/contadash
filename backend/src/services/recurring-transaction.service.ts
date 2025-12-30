@@ -75,9 +75,28 @@ export async function createRecurringTransaction(userId: string, data: any) {
   // Si no se especifica startDate, usar el primer día del mes actual
   const startDate = data.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   
+  // Get current exchange rate to calculate the missing currency amount
+  const today = new Date().toISOString().split('T')[0]
+  const currentExchangeRate = await getDolarBlueForDate(today)
+  
+  // Calculate missing currency amount for display purposes
+  let finalAmountArs = data.amountArs
+  let finalAmountUsd = data.amountUsd
+  
+  if (data.amountUsd > 0 && data.amountArs === 0) {
+    // USD is base, calculate ARS with current rate
+    finalAmountArs = data.amountUsd * currentExchangeRate
+  } else if (data.amountArs > 0 && data.amountUsd === 0) {
+    // ARS is base, calculate USD with current rate
+    finalAmountUsd = data.amountArs / currentExchangeRate
+  }
+  
   return await prisma.recurringTransaction.create({
     data: {
       ...data,
+      amountArs: finalAmountArs,
+      amountUsd: finalAmountUsd,
+      exchangeRate: currentExchangeRate,
       startDate,
       userId,
     },
@@ -254,28 +273,23 @@ export async function generateTransactionFromRecurring(recurringId: string, user
   // Convert Decimal to Number for calculations
   const baseAmountArs = Number(recurring.amountArs)
   const baseAmountUsd = Number(recurring.amountUsd)
-  const storedExchangeRate = Number(recurring.exchangeRate || 1)
   
-  let amountArs = baseAmountArs
-  let amountUsd = baseAmountUsd
+  let amountArs: number
+  let amountUsd: number
 
-  // Recalculate based on which currency is the base
-  if (baseAmountUsd > 0 && baseAmountArs > 0) {
-    // If both amounts exist, use the stored ratio to determine base currency
-    const storedRatio = baseAmountArs / baseAmountUsd
-    if (Math.abs(storedRatio - storedExchangeRate) < 1) {
-      // USD is base currency, recalculate ARS
-      amountArs = baseAmountUsd * exchangeRate
-    } else {
-      // ARS is base currency, recalculate USD
-      amountUsd = baseAmountArs / exchangeRate
-    }
-  } else if (baseAmountUsd > 0) {
-    // USD is base, calculate ARS
+  // Determine which currency is the base and calculate the other
+  if (baseAmountUsd > 0) {
+    // USD is base currency, calculate ARS with current month's exchange rate
+    amountUsd = baseAmountUsd
     amountArs = baseAmountUsd * exchangeRate
   } else if (baseAmountArs > 0) {
-    // ARS is base, calculate USD
+    // ARS is base currency, calculate USD with current month's exchange rate
+    amountArs = baseAmountArs
     amountUsd = baseAmountArs / exchangeRate
+  } else {
+    // Fallback: both are 0 (shouldn't happen)
+    amountArs = 0
+    amountUsd = 0
   }
 
   return await prisma.transaction.create({
