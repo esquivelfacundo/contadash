@@ -38,9 +38,10 @@ import RecurringTransactionFormDialog from '@/components/RecurringTransactionFor
 interface RecurringTransactionsModalProps {
   open: boolean
   onClose: () => void
+  onSuccess?: () => void
 }
 
-export default function RecurringTransactionsModal({ open, onClose }: RecurringTransactionsModalProps) {
+export default function RecurringTransactionsModal({ open, onClose, onSuccess }: RecurringTransactionsModalProps) {
   const [recurringTransactions, setRecurringTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -82,6 +83,7 @@ export default function RecurringTransactionsModal({ open, onClose }: RecurringT
     try {
       await recurringTransactionsApi.delete(id)
       loadRecurringTransactions()
+      onSuccess?.()
     } catch (err: any) {
       setError('Error al eliminar transacción recurrente')
     }
@@ -91,6 +93,7 @@ export default function RecurringTransactionsModal({ open, onClose }: RecurringT
     setFormDialogOpen(false)
     setEditingTransaction(null)
     loadRecurringTransactions()
+    onSuccess?.()
   }
 
   const formatCurrency = (amount: number) => {
