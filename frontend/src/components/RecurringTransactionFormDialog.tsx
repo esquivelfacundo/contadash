@@ -460,6 +460,24 @@ export default function RecurringTransactionFormDialog({
 
             <Grid item xs={12} sm={4}>
               <Controller
+                name="exchangeRate"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Cotización USD"
+                    type="number"
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    error={!!errors.exchangeRate}
+                    helperText={errors.exchangeRate?.message}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <Controller
                 name="dayOfMonth"
                 control={control}
                 render={({ field }) => (

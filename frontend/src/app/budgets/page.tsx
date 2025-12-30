@@ -146,7 +146,13 @@ export default function BudgetsPage() {
     { value: 12, label: 'Diciembre' },
   ]
 
-  const years = Array.from({ length: 10 }, (_, i) => currentDate.getFullYear() - 2 + i)
+  // Generate year options (2 years back to 7 years forward, plus next year if December)
+  const currentMonth = currentDate.getMonth()
+  const currentYear = currentDate.getFullYear()
+  const includeNextYear = currentMonth === 11 // December is month 11 (0-indexed)
+  const yearCount = includeNextYear ? 11 : 10
+  const startYear = includeNextYear ? currentYear + 8 : currentYear + 7
+  const years = Array.from({ length: yearCount }, (_, i) => startYear - i)
 
   if (loading && budgets.length === 0) {
     return (

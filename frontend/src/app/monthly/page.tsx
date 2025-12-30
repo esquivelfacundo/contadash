@@ -339,8 +339,13 @@ export default function MonthlyPage() {
   const monthExpenseUSDReal = monthExpenseUSD
   const monthBalanceUSDReal = monthIncomeUSDReal - monthExpenseUSDReal
 
-  // Generate year options (current year and 5 years back)
-  const yearOptions = Array.from({ length: 6 }, (_, i) => currentDate.getFullYear() - i)
+  // Generate year options (current year and 5 years back, plus next year if December)
+  const currentMonth = currentDate.getMonth()
+  const currentYear = currentDate.getFullYear()
+  const includeNextYear = currentMonth === 11 // December is month 11 (0-indexed)
+  const yearCount = includeNextYear ? 7 : 6
+  const startYear = includeNextYear ? currentYear + 1 : currentYear
+  const yearOptions = Array.from({ length: yearCount }, (_, i) => startYear - i)
 
   return (
     <DashboardLayout>

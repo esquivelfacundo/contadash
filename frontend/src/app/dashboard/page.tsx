@@ -1519,11 +1519,17 @@ function DashboardPage() {
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 sx={{ minWidth: 120 }}
               >
-                {Array.from({ length: 6 }, (_, i) => currentYear - i).map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
+                {(() => {
+                  const currentMonth = new Date().getMonth()
+                  const includeNextYear = currentMonth === 11 // December
+                  const yearCount = includeNextYear ? 7 : 6
+                  const startYear = includeNextYear ? currentYear + 1 : currentYear
+                  return Array.from({ length: yearCount }, (_, i) => startYear - i).map((y) => (
+                    <MenuItem key={y} value={y}>
+                      {y}
+                    </MenuItem>
+                  ))
+                })()}
               </TextField>
             </Box>
 
