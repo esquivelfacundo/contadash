@@ -531,7 +531,7 @@ export default function MonthlyPage() {
                     {formatCurrency(yearSummary.expense.ars)}
                   </Typography>
                   <Typography variant="caption" color="rgba(255,255,255,0.9)">
-                    {currentApiDolarRate !== null ? formatUSD(yearSummary.expense.ars / currentApiDolarRate) : '-'}
+                    {formatUSD(yearSummary.expense.usd || 0)}
                   </Typography>
                 </CardContent>
               </Card>
