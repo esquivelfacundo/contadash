@@ -195,6 +195,7 @@ export default function MonthlyPage() {
 
       // Calculate year summary
       const yearData = await transactionsApi.getStats(undefined, year)
+      console.log('[Monthly] Year Summary for', year, ':', yearData)
       setYearSummary(yearData)
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al cargar datos')
