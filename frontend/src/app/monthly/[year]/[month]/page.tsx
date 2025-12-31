@@ -51,6 +51,7 @@ import RecurringTransactionsModal from '@/components/modals/RecurringTransaction
 import TransactionHistoryModal from '@/components/modals/TransactionHistoryModal'
 import { transactionsApi } from '@/lib/api/transactions'
 import { exchangeApi } from '@/lib/api/exchange'
+import { apiClient } from '@/lib/api/client'
 import { useNotificationStore } from '@/lib/store/notification.store'
 
 const MONTHS = [
@@ -193,8 +194,9 @@ export default function MonthlyPage() {
 
       setMonthlyData(filteredTransactions)
 
-      // Calculate year summary
-      const yearData = await transactionsApi.getStats(undefined, year)
+      // Calculate year summary using yearly-summary endpoint (same as dashboard)
+      const yearSummaryResponse = await apiClient.get(`/analytics/yearly-summary?year=${year}`)
+      const yearData = yearSummaryResponse.data.totals
       console.log('[Monthly] Year Summary for', year, ':', yearData)
       setYearSummary(yearData)
     } catch (err: any) {
