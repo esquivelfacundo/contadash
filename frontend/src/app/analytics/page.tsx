@@ -1168,7 +1168,15 @@ export default function AnalyticsPage() {
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {clientTableData.allClients.filter((c: string) => c !== 'Sin cliente').map((client: string) => (
+                              {clientTableData.allClients
+                                .filter((c: string) => c !== 'Sin cliente')
+                                .sort((a: string, b: string) => {
+                                  // Calculate total income for each client
+                                  const totalA = clientTableData.monthsData.reduce((sum: number, m: any) => sum + (m.clients[a] || 0), 0)
+                                  const totalB = clientTableData.monthsData.reduce((sum: number, m: any) => sum + (m.clients[b] || 0), 0)
+                                  return totalB - totalA // Descending order
+                                })
+                                .map((client: string) => (
                                 <TableRow key={client}>
                                   <TableCell sx={{ color: 'white' }}>{client}</TableCell>
                                   {clientTableData.monthsData.map((m: any, idx: number) => (
