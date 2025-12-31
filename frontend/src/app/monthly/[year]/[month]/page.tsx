@@ -507,7 +507,7 @@ export default function MonthlyPage() {
                     {formatCurrency(yearSummary.income.ars)}
                   </Typography>
                   <Typography variant="caption" color="rgba(255,255,255,0.9)">
-                    {currentApiDolarRate !== null ? formatUSD(yearSummary.income.ars / currentApiDolarRate) : '-'}
+                    {formatUSD(yearSummary.income.usd || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -549,7 +549,7 @@ export default function MonthlyPage() {
                     {formatCurrency(yearSummary.balance.ars)}
                   </Typography>
                   <Typography variant="caption" color="rgba(255,255,255,0.9)">
-                    {currentApiDolarRate !== null ? formatUSD(yearSummary.balance.ars / currentApiDolarRate) : '-'}
+                    {formatUSD(yearSummary.balance.usd || 0)}
                   </Typography>
                 </CardContent>
               </Card>
