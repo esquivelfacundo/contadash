@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/server.ts",
     "build": "prisma generate && (tsc || exit 0) && cp -r src/templates dist/ && find dist/scripts -name '*.ts' -type f -delete",
-    "start": "prisma migrate deploy && node dist/scripts/fix-recurring-dates-utc.js && node dist/scripts/delete-duplicate-2025-income.js && node dist/scripts/delete-duplicate-2025-expenses.js && node dist/scripts/fix-all-usd-values.js && node dist/server.js",
+    "start": "prisma migrate deploy && node dist/scripts/fix-recurring-dates-utc.js && node dist/scripts/delete-duplicate-2025-income.js && node dist/scripts/delete-duplicate-2025-expenses.js && node dist/server.js",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "test": "vitest",
