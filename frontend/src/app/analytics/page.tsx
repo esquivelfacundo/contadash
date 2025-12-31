@@ -1160,6 +1160,7 @@ export default function AnalyticsPage() {
                             <TableHead>
                               <TableRow>
                                 <TableCell sx={{ bgcolor: '#1E293B', color: 'white', fontWeight: 'bold' }}>Cliente</TableCell>
+                                <TableCell align="right" sx={{ bgcolor: '#1E293B', color: '#10B981', fontWeight: 'bold' }}>Total</TableCell>
                                 {clientTableData.monthsData.map((m: any, idx: number) => (
                                   <TableCell key={idx} align="right" sx={{ bgcolor: '#1E293B', color: 'white', fontWeight: 'bold' }}>
                                     {m.month}
@@ -1176,16 +1177,22 @@ export default function AnalyticsPage() {
                                   const totalB = clientTableData.monthsData.reduce((sum: number, m: any) => sum + (m.clients[b] || 0), 0)
                                   return totalB - totalA // Descending order
                                 })
-                                .map((client: string) => (
-                                <TableRow key={client}>
-                                  <TableCell sx={{ color: 'white' }}>{client}</TableCell>
-                                  {clientTableData.monthsData.map((m: any, idx: number) => (
-                                    <TableCell key={idx} align="right" sx={{ color: '#3B82F6' }}>
-                                      {formatCurrency(m.clients[client] || 0)}
-                                    </TableCell>
-                                  ))}
-                                </TableRow>
-                              ))}
+                                .map((client: string) => {
+                                  const total = clientTableData.monthsData.reduce((sum: number, m: any) => sum + (m.clients[client] || 0), 0)
+                                  return (
+                                    <TableRow key={client}>
+                                      <TableCell sx={{ color: 'white' }}>{client}</TableCell>
+                                      <TableCell align="right" sx={{ color: '#10B981', fontWeight: 'bold' }}>
+                                        {formatCurrency(total)}
+                                      </TableCell>
+                                      {clientTableData.monthsData.map((m: any, idx: number) => (
+                                        <TableCell key={idx} align="right" sx={{ color: '#3B82F6' }}>
+                                          {formatCurrency(m.clients[client] || 0)}
+                                        </TableCell>
+                                      ))}
+                                    </TableRow>
+                                  )
+                                })}
                             </TableBody>
                           </Table>
                         </TableContainer>
