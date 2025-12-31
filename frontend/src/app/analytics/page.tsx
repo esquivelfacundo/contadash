@@ -80,6 +80,7 @@ const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', '
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [filterMode, setFilterMode] = useState<'months' | 'year'>('months')
   const [periodMonths, setPeriodMonths] = useState(6)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   
@@ -114,7 +115,7 @@ export default function AnalyticsPage() {
     if (categories.length > 0 && clients.length > 0 && creditCards.length > 0) {
       loadAnalyticsData()
     }
-  }, [periodMonths, selectedYear, categories, clients, creditCards])
+  }, [filterMode, periodMonths, selectedYear, categories, clients, creditCards])
 
   const loadMasterData = async () => {
     try {
@@ -154,9 +155,19 @@ export default function AnalyticsPage() {
 
   const loadCategoryEvolution = async () => {
     try {
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setMonth(startDate.getMonth() - periodMonths)
+      let endDate: Date
+      let startDate: Date
+      
+      if (filterMode === 'year') {
+        // Full year mode
+        startDate = new Date(selectedYear, 0, 1)
+        endDate = new Date(selectedYear, 11, 31, 23, 59, 59)
+      } else {
+        // Last N months mode
+        endDate = new Date()
+        startDate = new Date()
+        startDate.setMonth(startDate.getMonth() - periodMonths)
+      }
       
       const monthsData: any[] = []
       const currentDate = new Date(startDate)
@@ -262,9 +273,17 @@ export default function AnalyticsPage() {
 
   const loadClientEvolution = async () => {
     try {
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setMonth(startDate.getMonth() - periodMonths)
+      let endDate: Date
+      let startDate: Date
+      
+      if (filterMode === 'year') {
+        startDate = new Date(selectedYear, 0, 1)
+        endDate = new Date(selectedYear, 11, 31, 23, 59, 59)
+      } else {
+        endDate = new Date()
+        startDate = new Date()
+        startDate.setMonth(startDate.getMonth() - periodMonths)
+      }
       
       const monthsData: any[] = []
       const currentDate = new Date(startDate)
@@ -385,9 +404,17 @@ export default function AnalyticsPage() {
 
   const loadCardEvolution = async () => {
     try {
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setMonth(startDate.getMonth() - periodMonths)
+      let endDate: Date
+      let startDate: Date
+      
+      if (filterMode === 'year') {
+        startDate = new Date(selectedYear, 0, 1)
+        endDate = new Date(selectedYear, 11, 31, 23, 59, 59)
+      } else {
+        endDate = new Date()
+        startDate = new Date()
+        startDate.setMonth(startDate.getMonth() - periodMonths)
+      }
       
       const monthsData: { month: string; year: number; cards: { [key: string]: number } }[] = []
       const currentDate = new Date(startDate)
@@ -913,7 +940,7 @@ export default function AnalyticsPage() {
               Análisis Financiero
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Análisis profundo de tus finanzas • Últimos {periodMonths} meses
+              Análisis profundo de tus finanzas • {filterMode === 'year' ? `Año ${selectedYear}` : `Últimos ${periodMonths} meses`}
             </Typography>
           </Box>
           <Box display="flex" gap={2}>
@@ -935,31 +962,45 @@ export default function AnalyticsPage() {
           <CardContent>
             <Box display="flex" gap={3} alignItems="center" flexWrap="wrap">
               <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel sx={{ color: '#94A3B8' }}>Período</InputLabel>
+                <InputLabel sx={{ color: '#94A3B8' }}>Modo de Filtro</InputLabel>
                 <Select
-                  value={periodMonths}
-                  onChange={(e) => setPeriodMonths(Number(e.target.value))}
+                  value={filterMode}
+                  onChange={(e) => setFilterMode(e.target.value as 'months' | 'year')}
                   sx={{ color: 'white' }}
                 >
-                  <MenuItem value={3}>Últimos 3 meses</MenuItem>
-                  <MenuItem value={6}>Últimos 6 meses</MenuItem>
-                  <MenuItem value={12}>Últimos 12 meses</MenuItem>
-                  <MenuItem value={24}>Últimos 24 meses</MenuItem>
+                  <MenuItem value="months">Por Período</MenuItem>
+                  <MenuItem value="year">Por Año Completo</MenuItem>
                 </Select>
               </FormControl>
               
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel sx={{ color: '#94A3B8' }}>Año</InputLabel>
-                <Select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  sx={{ color: 'white' }}
-                >
-                  {[2024, 2025, 2026].map(year => (
-                    <MenuItem key={year} value={year}>{year}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {filterMode === 'months' ? (
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel sx={{ color: '#94A3B8' }}>Período</InputLabel>
+                  <Select
+                    value={periodMonths}
+                    onChange={(e) => setPeriodMonths(Number(e.target.value))}
+                    sx={{ color: 'white' }}
+                  >
+                    <MenuItem value={3}>Últimos 3 meses</MenuItem>
+                    <MenuItem value={6}>Últimos 6 meses</MenuItem>
+                    <MenuItem value={12}>Últimos 12 meses</MenuItem>
+                    <MenuItem value={24}>Últimos 24 meses</MenuItem>
+                  </Select>
+                </FormControl>
+              ) : (
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <InputLabel sx={{ color: '#94A3B8' }}>Año</InputLabel>
+                  <Select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    sx={{ color: 'white' }}
+                  >
+                    {[2022, 2023, 2024, 2025, 2026].map(year => (
+                      <MenuItem key={year} value={year}>{year}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
 
               <Chip
                 icon={<FilterList />}
